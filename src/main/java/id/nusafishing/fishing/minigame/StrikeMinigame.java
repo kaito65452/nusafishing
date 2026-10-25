@@ -141,17 +141,18 @@ public class StrikeMinigame {
         
         // Increment click count
         int currentClickCount = currentClicks.getOrDefault(playerId, 0) + 1;
-        currentClicks.put(playerId, currentClickCount);
-        
         int requiredClicksCount = requiredClicks.getOrDefault(playerId, 10);
         
         // Check if player has completed the required clicks
         if (currentClickCount >= requiredClicksCount) {
+            currentClicks.put(playerId, currentClickCount);
             // Success! Player caught the fish
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
             endMinigame(player, true);
             return true;
         }
+
+        currentClicks.put(playerId, currentClickCount);
         
         // Just update progress
         player.playSound(player.getLocation(), Sound.BLOCK_CHAIN_STEP, 0.5f, 1.0f);
@@ -165,6 +166,9 @@ public class StrikeMinigame {
     private void endMinigame(Player player, boolean success) {
         UUID playerId = player.getUniqueId();
         
+        // Cancel active game task first to prevent concurrent timer expiration
+        cancelActiveGame(player);
+
         // Get the pending data
         CustomFish fish = pendingFish.remove(playerId);
         ItemStack fishingRod = pendingRods.remove(playerId);
@@ -173,9 +177,6 @@ public class StrikeMinigame {
         // Clear minigame state
         requiredClicks.remove(playerId);
         currentClicks.remove(playerId);
-        
-        // Cancel active game
-        cancelActiveGame(player);
         
         // Make sure to remove player's minigame metadata
         player.removeMetadata("NF_InMinigame", plugin);

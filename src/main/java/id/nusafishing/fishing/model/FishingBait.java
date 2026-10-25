@@ -199,6 +199,11 @@ public class FishingBait {
                 container.set(usesKey, PersistentDataType.INTEGER, usesPerItem);
                 item.setItemMeta(meta);
                 item.setAmount(amount - 1);
+                if (slot == -1) {
+                    player.getInventory().setItemInOffHand(item);
+                } else {
+                    player.getInventory().setItem(slot, item);
+                }
             } else {
                 if (slot == -1) {
                     player.getInventory().setItemInOffHand(null);
@@ -220,6 +225,11 @@ public class FishingBait {
                 meta.setLore(lore);
             }
             item.setItemMeta(meta);
+            if (slot == -1) {
+                player.getInventory().setItemInOffHand(item);
+            } else {
+                player.getInventory().setItem(slot, item);
+            }
         }
 
         return true;

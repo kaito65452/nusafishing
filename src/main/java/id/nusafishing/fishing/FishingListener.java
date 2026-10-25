@@ -79,10 +79,12 @@ public class FishingListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
+        UUID playerId = player.getUniqueId();
         staminaManager.removePlayer(player);
         skillManager.savePlayerData(player);
         strikeMinigame.cleanupPlayer(player);
-        activeBaits.remove(player.getUniqueId());
+        activeBaits.remove(playerId);
+        lastCastTime.remove(playerId);
     }
     
     @EventHandler

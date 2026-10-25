@@ -173,10 +173,23 @@ public class FishingStatisticsManager {
         }
     }
     
+    public void shutdown() {
+        if (autosaveTask != null) {
+            autosaveTask.cancel();
+            autosaveTask = null;
+        }
+        // Save synchronously on shutdown
+        saveAllStatsDirect();
+    }
+
     /**
      * Simpan semua statistik pemain sekaligus dengan snapshot atomic thread-safe.
      */
     public synchronized void saveAllStats() {
+        saveAllStatsDirect();
+    }
+
+    private synchronized void saveAllStatsDirect() {
         YamlConfiguration configToSave = new YamlConfiguration();
         Map<UUID, Integer> fishCaughtSnapshot = new HashMap<>(fishCaughtCache);
         Map<UUID, Integer> legendarySnapshot = new HashMap<>(legendaryFishCache);
@@ -200,14 +213,6 @@ public class FishingStatisticsManager {
         } catch (IOException e) {
             plugin.getLogger().severe("Tidak bisa menyimpan fishing_stats.yml: " + e.getMessage());
         }
-    }
-
-    public void shutdown() {
-        if (autosaveTask != null) {
-            autosaveTask.cancel();
-            autosaveTask = null;
-        }
-        saveAllStats();
     }
     
     // Getter untuk placeholder

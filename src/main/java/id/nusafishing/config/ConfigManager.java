@@ -52,48 +52,31 @@ public class ConfigManager {
         try {
             config.options().parseComments(true);
         } catch (Throwable ignored) {}
-        
+
+        FileConfiguration defaultConfig = null;
+        try (java.io.InputStream defStream = plugin.getResource("config.yml")) {
+            if (defStream != null) {
+                defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defStream, java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } catch (Throwable ignored) {}
+
+        boolean modified = false;
+
+        // Sync missing defaults from bundled config.yml
+        if (defaultConfig != null) {
+            for (String key : defaultConfig.getKeys(true)) {
+                if (!config.contains(key)) {
+                    config.set(key, defaultConfig.get(key));
+                    modified = true;
+                }
+            }
+        }
+
         String currentVersion = plugin.getDescription().getVersion();
         String configVersion = config.getString("config_version", null);
-        boolean modified = false;
 
         if (configVersion == null || !configVersion.equalsIgnoreCase(currentVersion)) {
             config.set("config_version", currentVersion);
-            modified = true;
-        }
-
-        // 1. Check AuraSkills section
-        if (!config.contains("auraskills")) {
-            config.set("auraskills.enabled", true);
-            config.set("auraskills.base_xp", 15.0);
-            config.set("auraskills.tier_xp_multipliers.COMMON", 1.0);
-            config.set("auraskills.tier_xp_multipliers.UNCOMMON", 1.5);
-            config.set("auraskills.tier_xp_multipliers.RARE", 2.5);
-            config.set("auraskills.tier_xp_multipliers.EPIC", 4.0);
-            config.set("auraskills.tier_xp_multipliers.LEGENDARY", 7.0);
-            config.set("auraskills.tier_xp_multipliers.MYTHIC", 12.0);
-            modified = true;
-        }
-
-        // 2. Check AFK Fishing section
-        if (!config.contains("afk_fishing")) {
-            config.set("afk_fishing.enabled", true);
-            config.set("afk_fishing.luck-nerf", "20%");
-            config.set("afk_fishing.speed-nerf", "30%");
-            modified = true;
-        }
-
-        // 3. Check MYTHIC tier colors
-        if (!config.contains("tier_colors.fish.MYTHIC")) {
-            config.set("tier_colors.fish.MYTHIC", "&c");
-            modified = true;
-        }
-        if (!config.contains("tier_colors.rod.MYTHIC")) {
-            config.set("tier_colors.rod.MYTHIC", "&c");
-            modified = true;
-        }
-        if (!config.contains("economy.repair_cost_multipliers.MYTHIC")) {
-            config.set("economy.repair_cost_multipliers.MYTHIC", 5.0);
             modified = true;
         }
 
@@ -106,45 +89,30 @@ public class ConfigManager {
     public void autoUpdateFishingConfig() {
         if (fishingConfig == null) return;
 
+        FileConfiguration defaultFishingConfig = null;
+        try (java.io.InputStream defStream = plugin.getResource("fishing.yml")) {
+            if (defStream != null) {
+                defaultFishingConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defStream, java.nio.charset.StandardCharsets.UTF_8));
+            }
+        } catch (Throwable ignored) {}
+
+        boolean modified = false;
+
+        // Sync missing keys from bundled fishing.yml
+        if (defaultFishingConfig != null) {
+            for (String key : defaultFishingConfig.getKeys(true)) {
+                if (!fishingConfig.contains(key)) {
+                    fishingConfig.set(key, defaultFishingConfig.get(key));
+                    modified = true;
+                }
+            }
+        }
+
         String currentVersion = plugin.getDescription().getVersion();
         String configVersion = fishingConfig.getString("config_version", null);
-        boolean modified = false;
 
         if (configVersion == null || !configVersion.equalsIgnoreCase(currentVersion)) {
             fishingConfig.set("config_version", currentVersion);
-            modified = true;
-        }
-
-        // Check if mythic rod exists
-        if (!fishingConfig.contains("fishing_rods.mythic_rod")) {
-            ConfigurationSection mythicRod = fishingConfig.createSection("fishing_rods.mythic_rod");
-            mythicRod.set("name", "§cPancingan Trisula Purba");
-            mythicRod.set("description", "Pancingan sakti dialiri kekuatan abyssal samudra tak berdasar");
-            mythicRod.set("custom_model_data", 1006);
-            mythicRod.set("durability", 3000);
-            mythicRod.set("stamina_modifier", 0.25);
-            mythicRod.set("tier", "MYTHIC");
-            mythicRod.set("special_ability", true);
-            mythicRod.set("ability_description", "10% kesempatan menarik entitas mistik purba");
-            mythicRod.set("price", 85000.0);
-            mythicRod.set("lure_level", 6);
-            mythicRod.set("max_weight_capacity", 50000.0);
-            modified = true;
-        }
-
-        // Check if mythic fish exists
-        if (!fishingConfig.contains("fishes.samudera_mythic")) {
-            ConfigurationSection mythicFish = fishingConfig.createSection("fishes.samudera_mythic");
-            mythicFish.set("name", "Naga Samudra Purba");
-            mythicFish.set("description", "Entitas mistik penjaga palung laut terdalam dengan aura kosmik samudra");
-            mythicFish.set("material", "PUFFERFISH");
-            mythicFish.set("custom_model_data", 4009);
-            mythicFish.set("min_weight", 2000.0);
-            mythicFish.set("max_weight", 10000.0);
-            mythicFish.set("min_quality", 90);
-            mythicFish.set("max_quality", 100);
-            mythicFish.set("base_price", 550.0);
-            mythicFish.set("tier", "MYTHIC");
             modified = true;
         }
 

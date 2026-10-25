@@ -409,7 +409,7 @@ public class EventFishCollectorGUI extends GUI {
         
         // Check for bonus rewards based on streak
         if (random.nextDouble() < getRewardChance(player.getUniqueId())) {
-            giveRandomBonus();
+            giveRandomBonus(totalPrice);
         }
         
         // Refresh the GUI immediately
@@ -493,7 +493,7 @@ public class EventFishCollectorGUI extends GUI {
         player.sendMessage(summary.toString());
         
         // Always give a bonus when selling all
-        giveRandomBonus();
+        giveRandomBonus(totalEarnings);
         
         // Refresh the GUI immediately
         setupGui();
@@ -583,9 +583,9 @@ public class EventFishCollectorGUI extends GUI {
     }
     
     /**
-     * Give a random bonus to the player
+     * Give a random bonus to the player based on transaction value
      */
-    private void giveRandomBonus() {
+    private void giveRandomBonus(double transactionTotal) {
         // Choose a random bonus type
         BonusReward bonusType = BonusReward.fromId(random.nextInt(4));
         
@@ -603,10 +603,9 @@ public class EventFishCollectorGUI extends GUI {
                 break;
                 
             case MONEY:
-                // Give money bonus as percentage of their balance
+                // Give money bonus as percentage of this sale transaction
                 int percentBonus = 5 + (streak * 2); // 5% + 2% per streak
-                double balance = economy.getBalance(player);
-                double bonus = balance * (percentBonus / 100.0);
+                double bonus = Math.max(10.0, transactionTotal * (percentBonus / 100.0));
                 
                 // Add the bonus money
                 economy.depositMoney(player, bonus);

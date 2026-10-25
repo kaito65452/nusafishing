@@ -188,7 +188,8 @@ public class CustomFish {
         }
 
         // 1. Nilai dasar berdasarkan kualitas dan tier
-        double qualityFactor = quality / ((double)(minQuality + maxQuality) / 2);
+        double avgQuality = (double) (minQuality + maxQuality) / 2.0;
+        double qualityFactor = avgQuality > 0.0 ? (quality / avgQuality) : 1.0;
         double tierFactor = actualTier.getPriceMultiplier();
         double baseValue = basePrice * qualityFactor * tierFactor;
         

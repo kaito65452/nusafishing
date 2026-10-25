@@ -241,6 +241,19 @@ public class NusaFishing extends JavaPlugin {
         // Reload dependent systems
         fishingManager.reloadConfig();
         
+        // Reschedule price update task if needed
+        if (priceUpdateTask != null) {
+            priceUpdateTask.cancel();
+            priceUpdateTask = null;
+        }
+        if (economyManager != null && economyManager.isEconomyEnabled()) {
+            priceUpdateTask = getServer().getScheduler().runTaskTimer(this, 
+                () -> economyManager.regeneratePrices(), 
+                20 * 60 * 15,
+                20 * 60 * 15
+            );
+        }
+
         getLogger().info("All configurations reloaded successfully!");
     }
 }

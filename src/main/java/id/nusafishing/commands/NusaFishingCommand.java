@@ -694,18 +694,29 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Get rod info from persistent data
         PersistentDataContainer container = meta.getPersistentDataContainer();
-        NamespacedKey rodIdKey = new NamespacedKey(plugin, ROD_ID_KEY);
-        NamespacedKey durabilityKey = new NamespacedKey(plugin, ROD_DURABILITY_KEY);
+        NamespacedKey cleanRodKey = NamespacedKey.fromString("nusafishing:rod_id");
+        NamespacedKey dottedRodKey = new NamespacedKey(plugin, ROD_ID_KEY);
+        NamespacedKey cleanDurabilityKey = NamespacedKey.fromString("nusafishing:durability");
+        NamespacedKey dottedDurabilityKey = new NamespacedKey(plugin, ROD_DURABILITY_KEY);
         
-        if (!container.has(rodIdKey, PersistentDataType.STRING) ||
-            !container.has(durabilityKey, PersistentDataType.INTEGER)) {
+        String rodId = null;
+        if (cleanRodKey != null && container.has(cleanRodKey, PersistentDataType.STRING)) {
+            rodId = container.get(cleanRodKey, PersistentDataType.STRING);
+        } else if (container.has(dottedRodKey, PersistentDataType.STRING)) {
+            rodId = container.get(dottedRodKey, PersistentDataType.STRING);
+        }
+
+        if (rodId == null) {
             player.sendMessage("§cIni bukan pancingan custom yang valid!");
             return false;
         }
-        
-        // Get rod data
-        String rodId = container.get(rodIdKey, PersistentDataType.STRING);
-        int currentDurability = container.get(durabilityKey, PersistentDataType.INTEGER);
+
+        int currentDurability = 0;
+        if (cleanDurabilityKey != null && container.has(cleanDurabilityKey, PersistentDataType.INTEGER)) {
+            currentDurability = container.get(cleanDurabilityKey, PersistentDataType.INTEGER);
+        } else if (container.has(dottedDurabilityKey, PersistentDataType.INTEGER)) {
+            currentDurability = container.get(dottedDurabilityKey, PersistentDataType.INTEGER);
+        }
         
         FishingRod rod = plugin.getFishingManager().getRodById(rodId);
         if (rod == null) {

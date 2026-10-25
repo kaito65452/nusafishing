@@ -1,7 +1,7 @@
 name: nusafishing
 main: id.nusafishing.NusaFishing
 version: ${version}
-website: https://github.com/RanggaGibran/nusafishing
+website: https://github.com/kaito65452/nusafishing
 author: "RanggaGibran"
 contributors: ["Asano Saryu"]
 api-version: '1.21'

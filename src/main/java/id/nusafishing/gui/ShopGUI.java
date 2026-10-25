@@ -260,9 +260,13 @@ public class ShopGUI extends GUI {
                 });
         
         // Collect all fish from player's inventory
+        List<Integer> fishSlotIndices = new ArrayList<>();
         List<ItemStack> fishItems = new ArrayList<>();
-        for (ItemStack item : player.getInventory().getContents()) {
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        for (int i = 0; i < storage.length; i++) {
+            ItemStack item = storage[i];
             if (item != null && isFish(item)) {
+                fishSlotIndices.add(i);
                 fishItems.add(item);
             }
         }
@@ -279,6 +283,7 @@ public class ShopGUI extends GUI {
         int slot = 10; // Start at the second row, second column
         for (int i = startIndex; i < endIndex; i++) {
             ItemStack fishItem = fishItems.get(i);
+            int storageSlot = fishSlotIndices.get(i);
             CustomFish fish = getFishFromItem(fishItem);
             
             if (fish != null) {
@@ -287,9 +292,7 @@ public class ShopGUI extends GUI {
                 List<String> lore = new ArrayList<>();
                 lore.add("§8" + fish.getDescription());
                 lore.add("");
-                // Menggabungkan informasi berat dan kualitas dalam satu baris
                 lore.add("§7Kualitas: §f" + fish.getQuality() + "/100 §7| Berat: §f" + String.format("%.2f", fish.getWeight()) + " kg");
-                // Menggabungkan informasi harga dan jumlah dalam satu baris
                 lore.add("§7Harga: §f" + economy.formatMoney(price * fishItem.getAmount()) + " §7(" + economy.formatMoney(price) + " x " + fishItem.getAmount() + ")");
                 lore.add("");
                 lore.add("§a► Klik untuk menjual");
@@ -299,9 +302,8 @@ public class ShopGUI extends GUI {
                         .build();
                 
                 // Add to inventory with click handler that sells the fish
-                final int itemIndex = i;
                 setItem(slot, displayItem, () -> {
-                    sellFish(itemIndex, fishItem, fish, price);
+                    sellFish(storageSlot, fishItem, fish, price);
                     // Refresh the inventory after selling
                     showFishSellShop(currentPage);
                 });
@@ -484,35 +486,41 @@ public class ShopGUI extends GUI {
      * @param fish The CustomFish data
      * @param unitPrice The price per fish
      */
-    private void sellFish(int itemIndex, ItemStack fishItem, CustomFish fish, double unitPrice) {
-        int amount = fishItem.getAmount();
-        
-        // Remove the item from the player's inventory
-        Map<Integer, ItemStack> notRemoved = player.getInventory().removeItem(fishItem);
-        int removedAmount = amount;
-        if (!notRemoved.isEmpty()) {
-            for (ItemStack leftover : notRemoved.values()) {
-                removedAmount -= leftover.getAmount();
-            }
-        }
-        
-        if (removedAmount <= 0) {
+    private void sellFish(int storageSlot, ItemStack fishItem, CustomFish fish, double unitPrice) {
+        ItemStack[] storage = player.getInventory().getStorageContents();
+        if (storageSlot < 0 || storageSlot >= storage.length) {
             player.sendMessage("§cIkan tidak ditemukan di inventory kamu!");
             return;
         }
 
-        double totalPrice = unitPrice * removedAmount;
-        
+        ItemStack currentItem = storage[storageSlot];
+        if (currentItem == null || !isFish(currentItem)) {
+            player.sendMessage("§cIkan tidak ditemukan di inventory kamu!");
+            return;
+        }
+
+        CustomFish currentFish = getFishFromItem(currentItem);
+        if (currentFish == null || !currentFish.getId().equals(fish.getId())) {
+            player.sendMessage("§cIkan di inventory telah berubah!");
+            return;
+        }
+
+        int amount = currentItem.getAmount();
+        double totalPrice = unitPrice * amount;
+
+        // Remove the item directly from the storage slot
+        player.getInventory().setItem(storageSlot, null);
+
         // Add money to the player
         economy.depositMoney(player, totalPrice);
-        
+
         // Update dynamic price for this fish
-        economy.updateDynamicPrice(fish.getId(), removedAmount);
-        
+        economy.updateDynamicPrice(fish.getId(), amount);
+
         // Notify the player
-        player.sendMessage("§aKamu menjual " + removedAmount + "x " + fish.getName() + " seharga " 
+        player.sendMessage("§aKamu menjual " + amount + "x " + fish.getName() + " seharga " 
                 + economy.formatMoney(totalPrice));
-        
+
         // Refresh the inventory
         updateBalanceDisplay();
     }

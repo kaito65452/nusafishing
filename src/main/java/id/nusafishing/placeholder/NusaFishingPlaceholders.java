@@ -74,6 +74,15 @@ public class NusaFishingPlaceholders extends PlaceholderExpansion {
             if (identifier.equals("fishing_exp")) {
                 return String.valueOf(plugin.getSkillManager().getFishingExperience(player.getUniqueId()));
             }
+
+            // Stamina
+            if (identifier.equals("stamina")) {
+                return String.format("%.1f", plugin.getStaminaManager().getStamina(player.getUniqueId()));
+            }
+
+            if (identifier.equals("max_stamina")) {
+                return String.format("%.1f", plugin.getStaminaManager().getMaxStamina(player.getUniqueId()));
+            }
             
             // Ikan terbesar
             if (identifier.equals("largest_fish_weight")) {
@@ -119,20 +128,6 @@ public class NusaFishingPlaceholders extends PlaceholderExpansion {
             }
         }
         
-        if (identifier.startsWith("top_largest_fish_")) {
-            try {
-                int rank = Integer.parseInt(identifier.substring("top_largest_fish_".length()));
-                Map.Entry<UUID, Double> entry = statsManager.getTopLargestFish(rank);
-                if (entry != null) {
-                    String playerName = Bukkit.getOfflinePlayer(entry.getKey()).getName();
-                    return playerName != null ? playerName : "Unknown";
-                }
-                return "Tidak Ada";
-            } catch (NumberFormatException e) {
-                return "Rank Invalid";
-            }
-        }
-        
         if (identifier.startsWith("top_largest_fish_weight_")) {
             try {
                 String rankStr = identifier.substring("top_largest_fish_weight_".length());
@@ -145,6 +140,20 @@ public class NusaFishingPlaceholders extends PlaceholderExpansion {
             } catch (NumberFormatException e) {
                 plugin.getLogger().warning("Invalid rank format in placeholder: " + identifier);
                 return "0.0";
+            }
+        }
+        
+        if (identifier.startsWith("top_largest_fish_")) {
+            try {
+                int rank = Integer.parseInt(identifier.substring("top_largest_fish_".length()));
+                Map.Entry<UUID, Double> entry = statsManager.getTopLargestFish(rank);
+                if (entry != null) {
+                    String playerName = Bukkit.getOfflinePlayer(entry.getKey()).getName();
+                    return playerName != null ? playerName : "Unknown";
+                }
+                return "Tidak Ada";
+            } catch (NumberFormatException e) {
+                return "Rank Invalid";
             }
         }
         

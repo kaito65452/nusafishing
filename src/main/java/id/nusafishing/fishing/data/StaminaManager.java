@@ -96,7 +96,21 @@ public class StaminaManager {
     }
     
     public double getStamina(Player player) {
-        return playerStamina.getOrDefault(player.getUniqueId(), maxStamina);
+        if (player == null) return maxStamina;
+        return getStamina(player.getUniqueId());
+    }
+
+    public double getStamina(UUID playerId) {
+        if (playerId == null) return maxStamina;
+        return playerStamina.getOrDefault(playerId, maxStamina);
+    }
+
+    public double getMaxStamina() {
+        return maxStamina;
+    }
+
+    public double getMaxStamina(UUID playerId) {
+        return maxStamina;
     }
     
     private void sendActionBar(Player player, String message) {

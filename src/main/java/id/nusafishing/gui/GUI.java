@@ -15,6 +15,7 @@ public abstract class GUI {
     protected final Inventory inventory;
     protected final Map<Integer, Runnable> clickHandlers = new HashMap<>();
     protected final Player player;
+    protected InventoryClickEvent lastClickEvent;
     
     private static final Map<UUID, GUI> openInventories = new HashMap<>();
     
@@ -54,6 +55,7 @@ public abstract class GUI {
      * @return true if the click was handled
      */
     public boolean handleClick(InventoryClickEvent event) {
+        this.lastClickEvent = event;
         int slot = event.getRawSlot();
         if (clickHandlers.containsKey(slot)) {
             clickHandlers.get(slot).run();
@@ -61,6 +63,10 @@ public abstract class GUI {
             return true;
         }
         return false;
+    }
+
+    public InventoryClickEvent getLastClickEvent() {
+        return lastClickEvent;
     }
     
     /**

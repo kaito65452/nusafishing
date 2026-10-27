@@ -622,9 +622,14 @@ public class EventFishCollectorGUI extends GUI {
                 // Get bait from configuration
                 FishingBait bait = plugin.getConfigManager().getFishingBaits().get("rare_bait");
                 if (bait != null) {
-                    // Run command to give bait
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                            "nusafishing bait rare_bait " + player.getName() + " " + baitAmount);
+                    ItemStack baitItem = bait.createItemStack(baitAmount);
+                    Map<Integer, ItemStack> leftover = player.getInventory().addItem(baitItem);
+                    if (!leftover.isEmpty()) {
+                        for (ItemStack drop : leftover.values()) {
+                            player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                        }
+                        player.sendMessage("§eInventori kamu penuh! Hadiah umpan telah dijatuhkan ke tanah.");
+                    }
                     
                     // Notify player
                     player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0) + 
@@ -647,12 +652,16 @@ public class EventFishCollectorGUI extends GUI {
                 
                 // If we found a rod, repair it
                 if (rod != null && rod.getType() == Material.FISHING_ROD) {
-                    // Run repair command
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                            "nusafishing repair " + player.getName());
-                    
-                    // Notify player
-                    player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0));
+                    if (id.nusafishing.fishing.FishingListener.repairRod(player, rod)) {
+                        // Notify player
+                        player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0));
+                    } else {
+                        // Fallback to EXP if rod already fully repaired
+                        int fallbackExp = 150 * streak;
+                        plugin.getSkillManager().addFishingExp(player, fallbackExp);
+                        player.sendMessage("§d§l[BONUS MISTIK] §f" + BonusReward.EXP.getFormatted(fallbackExp) + 
+                                          " §7(pancingan sudah dalam durabilitas penuh)");
+                    }
                 } else {
                     // Fallback to EXP if no rod found
                     int fallbackExp = 150 * streak;

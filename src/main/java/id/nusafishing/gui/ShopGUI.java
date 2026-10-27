@@ -209,7 +209,8 @@ public class ShopGUI extends GUI {
             // Add to inventory with click handler that buys the bait
             setItem(slot, baitItem, () -> {
                 // If shift-clicking, try to buy 5
-                int amount = player.isSneaking() ? 5 : 1;
+                boolean isShift = (lastClickEvent != null && lastClickEvent.isShiftClick()) || player.isSneaking();
+                int amount = isShift ? 5 : 1;
                 double totalPrice = price * amount;
                 
                 if (economy.hasMoney(player, totalPrice)) {
@@ -427,6 +428,7 @@ public class ShopGUI extends GUI {
             // Get the rod data
             FishingRod rod = plugin.getConfigManager().getFishingRods().get(rodId);
             if (rod == null) {
+                economy.depositMoney(player, price);
                 player.sendMessage("§cTerjadi kesalahan saat membeli pancingan!");
                 return;
             }
@@ -434,8 +436,14 @@ public class ShopGUI extends GUI {
             // Create the fishing rod item
             ItemStack rodItem = rod.createItemStack();
             
-            // Give to player
-            player.getInventory().addItem(rodItem);
+            // Give to player, drop naturally if inventory full
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(rodItem);
+            if (!leftover.isEmpty()) {
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                }
+                player.sendMessage("§eInventori kamu penuh! Pancingan telah dijatuhkan ke tanah.");
+            }
             player.sendMessage("§aKamu berhasil membeli §b" + rod.getName() + "§a!");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
             
@@ -458,6 +466,7 @@ public class ShopGUI extends GUI {
             // Get the bait data
             FishingBait bait = plugin.getConfigManager().getFishingBaits().get(baitId);
             if (bait == null) {
+                economy.depositMoney(player, price);
                 player.sendMessage("§cTerjadi kesalahan saat membeli umpan!");
                 return;
             }
@@ -465,8 +474,14 @@ public class ShopGUI extends GUI {
             // Create the bait item
             ItemStack baitItem = bait.createItemStack(amount);
             
-            // Give to player
-            player.getInventory().addItem(baitItem);
+            // Give to player, drop naturally if inventory full
+            Map<Integer, ItemStack> leftover = player.getInventory().addItem(baitItem);
+            if (!leftover.isEmpty()) {
+                for (ItemStack drop : leftover.values()) {
+                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                }
+                player.sendMessage("§eInventori kamu penuh! Umpan telah dijatuhkan ke tanah.");
+            }
             
             player.sendMessage("§aKamu berhasil membeli §f" + amount + "x §a" + bait.getName() + "§a!");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -521,8 +536,8 @@ public class ShopGUI extends GUI {
         player.sendMessage("§aKamu menjual " + amount + "x " + fish.getName() + " seharga " 
                 + economy.formatMoney(totalPrice));
 
-        // Refresh the inventory
-        updateBalanceDisplay();
+        // Refresh the shop display and balance
+        showFishSellShop(currentPage);
     }
     
     /**

@@ -190,7 +190,8 @@ public class CustomFish {
         // 1. Nilai dasar berdasarkan kualitas dan tier
         double avgQuality = (double) (minQuality + maxQuality) / 2.0;
         double qualityFactor = avgQuality > 0.0 ? (quality / avgQuality) : 1.0;
-        double tierFactor = actualTier.getPriceMultiplier();
+        FishTier tier = getActualTier();
+        double tierFactor = tier.getPriceMultiplier();
         double baseValue = basePrice * qualityFactor * tierFactor;
         
         // 2. Faktor berat dengan diminishing returns
@@ -300,11 +301,12 @@ public class CustomFish {
             meta = org.bukkit.Bukkit.getItemFactory().getItemMeta(fishItem.getType());
         }
 
-        meta.setDisplayName(actualTier.getColor() + name + " " + actualTier.getDisplayName());
+        FishTier tier = getActualTier();
+        meta.setDisplayName(tier.getColor() + name + " " + tier.getDisplayName());
         List<String> lore = new java.util.ArrayList<>();
         lore.add("§7Berat: §f" + getFormattedWeight());
         lore.add("§7Kualitas: §f" + quality + "/100");
-        lore.add("§7Tier: " + actualTier.getColor() + actualTier.getDisplayName());
+        lore.add("§7Tier: " + tier.getColor() + tier.getDisplayName());
         lore.add("§7Nilai: §f" + String.format("%.2f", getPrice()));
         lore.add("");
         lore.add("§8" + description);
@@ -315,7 +317,7 @@ public class CustomFish {
         container.set(NamespacedKey.fromString("nusafishing:fish_id"), PersistentDataType.STRING, id);
         container.set(NamespacedKey.fromString("nusafishing:fish_weight"), PersistentDataType.DOUBLE, weight);
         container.set(NamespacedKey.fromString("nusafishing:fish_quality"), PersistentDataType.INTEGER, quality);
-        container.set(NamespacedKey.fromString("nusafishing:fish_tier"), PersistentDataType.INTEGER, actualTier.ordinal());
+        container.set(NamespacedKey.fromString("nusafishing:fish_tier"), PersistentDataType.INTEGER, tier.ordinal());
         fishItem.setItemMeta(meta);
         
         return fishItem;

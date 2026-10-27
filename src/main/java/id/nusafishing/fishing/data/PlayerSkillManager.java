@@ -61,6 +61,14 @@ public class PlayerSkillManager {
             plugin.getLogger().severe("Could not save player data for " + player.getName() + ": " + e.getMessage());
         }
     }
+
+    public void unloadPlayerData(Player player) {
+        if (player == null) return;
+        savePlayerData(player);
+        UUID playerId = player.getUniqueId();
+        fishingLevels.remove(playerId);
+        fishingExperience.remove(playerId);
+    }
     
     public void saveAllData() {
         Map<UUID, Integer> levelsSnapshot = new HashMap<>(fishingLevels);
@@ -114,8 +122,9 @@ public class PlayerSkillManager {
             currentLevel++;
             expForNextLevel = getExpForNextLevel(currentLevel);
             
-            // Send level up message
-            //player.sendMessage("§a§lLevel Naik! §fSkill memancing kamu naik menjadi level §e" + currentLevel);
+            // Send level up message and sound
+            player.sendMessage("§a§lLevel Naik! §fSkill memancing kamu naik menjadi level §e" + currentLevel + "§f!");
+            player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
         }
         
         fishingExperience.put(playerId, newExp);

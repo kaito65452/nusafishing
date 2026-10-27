@@ -14,8 +14,7 @@ fun getGitCommitHash(): String {
     }
 }
 
-val gitCommit = getGitCommitHash()
-version = "1.4+SNAPSHOT+$gitCommit"
+version = "1.4"
 
 repositories {
     mavenCentral()

@@ -81,7 +81,7 @@ public class FishingListener implements Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
         staminaManager.removePlayer(player);
-        skillManager.savePlayerData(player);
+        skillManager.unloadPlayerData(player);
         strikeMinigame.cleanupPlayer(player);
         activeBaits.remove(playerId);
         lastCastTime.remove(playerId);

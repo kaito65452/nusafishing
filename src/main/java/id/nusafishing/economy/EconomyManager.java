@@ -27,7 +27,7 @@ public class EconomyManager {
     private double priceFluctuation = 0.2;
     
     // Cache for dynamic prices (fish id -> current price multiplier)
-    private Map<String, Double> priceDynamics = new HashMap<>();
+    private Map<String, Double> priceDynamics = new java.util.concurrent.ConcurrentHashMap<>();
     private final Random random = new Random();
     
     public EconomyManager(NusaFishing plugin) {
@@ -194,10 +194,11 @@ public class EconomyManager {
     public void regeneratePrices() {
         if (!dynamicPricing) return;
         
-        for (String fishId : priceDynamics.keySet()) {
-            double currentFactor = priceDynamics.get(fishId);
+        for (Map.Entry<String, Double> entry : priceDynamics.entrySet()) {
+            String fishId = entry.getKey();
+            double currentFactor = entry.getValue();
             
-            if (currentFactor < 1.0) {
+            if (Math.abs(currentFactor - 1.0) > 0.0001) {
                 // Get fish tier
                 CustomFish fish = plugin.getConfigManager().getCustomFishes().get(fishId);
                 double recoveryRate;
@@ -228,8 +229,13 @@ public class EconomyManager {
                     recoveryRate = 0.02; // Default 2%
                 }
                 
-                // Gradually move price back toward normal
-                double newFactor = Math.min(1.0, currentFactor + recoveryRate);
+                // Gradually move price back toward normal equilibrium (1.0)
+                double newFactor;
+                if (currentFactor < 1.0) {
+                    newFactor = Math.min(1.0, currentFactor + recoveryRate);
+                } else {
+                    newFactor = Math.max(1.0, currentFactor - recoveryRate);
+                }
                 priceDynamics.put(fishId, newFactor);
             }
         }

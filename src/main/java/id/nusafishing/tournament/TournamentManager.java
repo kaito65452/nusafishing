@@ -142,6 +142,12 @@ public class TournamentManager {
                 tournament.setScheduleTime(hourOfDay, minuteOfHour);
                 tournament.setDaysOfWeek(daysOfWeek);
                 tournament.setAutoStart(autoStart);
+
+                // Muat spesies target jika jenis turnamen SPECIFIC_SPECIES
+                List<String> targetSpecies = tournamentSection.getStringList("target_species");
+                if (targetSpecies != null && !targetSpecies.isEmpty()) {
+                    tournament.setTargetSpecies(targetSpecies);
+                }
                 
                 // Muat konfigurasi hadiah
                 ConfigurationSection rewardsSection = tournamentSection.getConfigurationSection("rewards");

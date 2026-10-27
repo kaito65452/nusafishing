@@ -625,7 +625,13 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Set amount and give to player
         rodItem.setAmount(amount);
-        player.getInventory().addItem(rodItem);
+        Map<Integer, ItemStack> rodLeftovers = player.getInventory().addItem(rodItem);
+        if (!rodLeftovers.isEmpty()) {
+            for (ItemStack drop : rodLeftovers.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+            player.sendMessage("§eInventori kamu penuh! Pancingan telah dijatuhkan ke tanah.");
+        }
         
         player.sendMessage("§aKamu mendapatkan §f" + amount + "x " + rod.getTier().getColor() + rod.getName() + "§a!");
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -648,7 +654,13 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Create the bait item and give to player
         ItemStack baitItem = bait.createItemStack(amount);
-        player.getInventory().addItem(baitItem);
+        Map<Integer, ItemStack> baitLeftovers = player.getInventory().addItem(baitItem);
+        if (!baitLeftovers.isEmpty()) {
+            for (ItemStack drop : baitLeftovers.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            }
+            player.sendMessage("§eInventori kamu penuh! Umpan telah dijatuhkan ke tanah.");
+        }
         
         player.sendMessage("§aKamu mendapatkan §f" + amount + "x §a" + bait.getName() + "§a!");
         return true;

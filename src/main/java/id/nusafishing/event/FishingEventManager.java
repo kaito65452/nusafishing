@@ -83,8 +83,9 @@ public class FishingEventManager {
         
         // Convert string names to Biome enums
         for (String biomeName : biomeNames) {
+            if (biomeName == null || biomeName.isBlank()) continue;
             try {
-                Biome biome = Biome.valueOf(biomeName.toUpperCase());
+                Biome biome = Biome.valueOf(biomeName.trim().toUpperCase());
                 validBiomes.add(biome);
             } catch (IllegalArgumentException e) {
                 plugin.getLogger().warning("Invalid biome in config: " + biomeName);

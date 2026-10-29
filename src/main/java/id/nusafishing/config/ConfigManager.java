@@ -180,6 +180,9 @@ public class ConfigManager {
                 
                 // Baca tier dan special ability
                 String tierName = rodsSection.getString(key + ".tier", "BASIC");
+                if (tierName != null) {
+                    tierName = tierName.toUpperCase(java.util.Locale.ROOT);
+                }
                 FishingRod.RodTier tier;
                 try {
                     tier = FishingRod.RodTier.valueOf(tierName);
@@ -230,7 +233,11 @@ public class ConfigManager {
                 String name = baitsSection.getString(key + ".name", key);
                 String description = baitsSection.getString(key + ".description", "");
                 int customModelData = baitsSection.getInt(key + ".custom_model_data", 0);
-                Material material = Material.getMaterial(baitsSection.getString(key + ".material", "COD"));
+                String materialName = baitsSection.getString(key + ".material", "COD");
+                Material material = Material.getMaterial(materialName != null ? materialName.toUpperCase(java.util.Locale.ROOT) : "COD");
+                if (material == null) {
+                    material = Material.COD;
+                }
                 List<String> validFish = baitsSection.getStringList(key + ".valid_fish");
                 double attractionModifier = baitsSection.getDouble(key + ".attraction_modifier", 1.0);
                 
@@ -272,6 +279,9 @@ public class ConfigManager {
                 
                 // Baca tier ikan
                 String tierName = fishesSection.getString(key + ".tier", "COMMON");
+                if (tierName != null) {
+                    tierName = tierName.toUpperCase(java.util.Locale.ROOT);
+                }
                 CustomFish.FishTier tier;
                 try {
                     tier = CustomFish.FishTier.valueOf(tierName);

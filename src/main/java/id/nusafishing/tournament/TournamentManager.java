@@ -1,5 +1,7 @@
 package id.nusafishing.tournament;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,7 +14,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -28,20 +34,33 @@ import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 
-public class TournamentManager {
+public class TournamentManager implements Listener {
     private final NusaFishing plugin;
     private Tournament activeTournament;
     private final Map<UUID, TournamentEntry> entries = new ConcurrentHashMap<>();
     private final Map<String, Tournament> scheduledTournaments = new HashMap<>();
+    private final Map<String, java.time.LocalDate> lastTournamentRunDates = new HashMap<>();
+    private final File pendingRewardsFile;
+    private final FileConfiguration pendingRewardsConfig;
     private BukkitTask schedulerTask;
     private BukkitTask updateTask;
     private BukkitTask endTask;
-    
+
     // Waktu minimum antara turnamen (dalam menit)
     private int minTimeBetweenTournaments = 60;
-    
+
     public TournamentManager(NusaFishing plugin) {
         this.plugin = plugin;
+        this.pendingRewardsFile = new File(plugin.getDataFolder(), "pending_tournament_rewards.yml");
+        if (!pendingRewardsFile.exists()) {
+            pendingRewardsFile.getParentFile().mkdirs();
+            try {
+                pendingRewardsFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().warning("Could not create pending_tournament_rewards.yml: " + e.getMessage());
+            }
+        }
+        this.pendingRewardsConfig = YamlConfiguration.loadConfiguration(pendingRewardsFile);
         loadConfiguration();
         startScheduler();
     }
@@ -168,6 +187,77 @@ public class TournamentManager {
         }
     }
     
+    private synchronized void queueOfflineReward(UUID playerId, String playerName, int exp, List<String> commands, double money) {
+        String key = playerId.toString();
+        int existingExp = pendingRewardsConfig.getInt(key + ".exp", 0);
+        pendingRewardsConfig.set(key + ".exp", existingExp + exp);
+        pendingRewardsConfig.set(key + ".player_name", playerName);
+
+        double existingMoney = pendingRewardsConfig.getDouble(key + ".money", 0.0);
+        if (money > 0) {
+            pendingRewardsConfig.set(key + ".money", existingMoney + money);
+        }
+
+        List<String> existingCommands = pendingRewardsConfig.getStringList(key + ".commands");
+        if (commands != null && !commands.isEmpty()) {
+            existingCommands.addAll(commands);
+        }
+        pendingRewardsConfig.set(key + ".commands", existingCommands);
+
+        try {
+            pendingRewardsConfig.save(pendingRewardsFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save pending tournament reward: " + e.getMessage());
+        }
+    }
+
+    @EventHandler
+    public synchronized void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline()) return;
+
+            String key = player.getUniqueId().toString();
+            synchronized (this) {
+                if (!pendingRewardsConfig.contains(key)) {
+                    return;
+                }
+
+                int exp = pendingRewardsConfig.getInt(key + ".exp", 0);
+                double money = pendingRewardsConfig.getDouble(key + ".money", 0.0);
+                List<String> commands = pendingRewardsConfig.getStringList(key + ".commands");
+
+                if (money > 0 && plugin.getEconomyManager().isEconomyEnabled()) {
+                    plugin.getEconomyManager().depositMoney(player, money);
+                }
+
+                if (exp > 0) {
+                    plugin.getSkillManager().addFishingExp(player, exp);
+                    if (plugin.getAuraSkillsHook() != null) {
+                        plugin.getAuraSkillsHook().addXp(player, exp);
+                    }
+                }
+
+                if (commands != null && !commands.isEmpty()) {
+                    for (String cmd : commands) {
+                        String finalCmd = cmd.replace("%player%", player.getName());
+                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
+                    }
+                }
+
+                player.sendMessage("§a§l[TURNAMEN] §fKamu menerima hadiah turnamen yang tertunda!");
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
+
+                pendingRewardsConfig.set(key, null);
+                try {
+                    pendingRewardsConfig.save(pendingRewardsFile);
+                } catch (IOException e) {
+                    plugin.getLogger().severe("Could not save pending tournament rewards after claim: " + e.getMessage());
+                }
+            }
+        });
+    }
+
     /**
      * Mulai scheduler untuk mengecek turnamen terjadwal
      */
@@ -176,39 +266,42 @@ public class TournamentManager {
         if (schedulerTask != null) {
             schedulerTask.cancel();
         }
-        
-        // Jalankan scheduler setiap 1 menit
+
+        // Jalankan scheduler setiap 10 detik (200 ticks) untuk toleransi TPS drift
         schedulerTask = new BukkitRunnable() {
             @Override
             public void run() {
                 checkScheduledTournaments();
             }
-        }.runTaskTimer(plugin, 20 * 60, 20 * 60); // Check every minute
+        }.runTaskTimer(plugin, 200L, 200L);
     }
-    
+
     /**
      * Cek apakah ada turnamen terjadwal yang harus dimulai
      */
     private void checkScheduledTournaments() {
         if (activeTournament != null) return; // Jangan mulai turnamen baru jika ada yang sedang berjalan
-        
-        // Get current time
+
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
-        int currentHour = now.getHour();
-        int currentMinute = now.getMinute();
+        java.time.LocalDate today = now.toLocalDate();
         String currentDayOfWeek = now.getDayOfWeek().toString();
-        
+
         for (Tournament tournament : scheduledTournaments.values()) {
             if (!tournament.isAutoStart()) continue;
-            
-            // Cek jadwal
-            boolean dayMatches = tournament.getDaysOfWeek() != null && 
+
+            boolean dayMatches = tournament.getDaysOfWeek() != null &&
                     tournament.getDaysOfWeek().stream().anyMatch(d -> d.equalsIgnoreCase(currentDayOfWeek));
-            if (tournament.getHourOfDay() == currentHour && 
-                tournament.getMinuteOfHour() == currentMinute &&
-                dayMatches) {
-                
-                // Mulai turnamen
+            if (!dayMatches) continue;
+
+            // Jangan jalankan turnamen yang sama lebih dari sekali di hari yang sama
+            if (today.equals(lastTournamentRunDates.get(tournament.getId()))) {
+                continue;
+            }
+
+            java.time.LocalDateTime scheduledDateTime = today.atTime(tournament.getHourOfDay(), tournament.getMinuteOfHour());
+            // Cek rentang waktu 5 menit toleransi lag TPS
+            if (!now.isBefore(scheduledDateTime) && now.isBefore(scheduledDateTime.plusMinutes(5))) {
+                lastTournamentRunDates.put(tournament.getId(), today);
                 startTournament(tournament);
                 return;
             }
@@ -440,31 +533,41 @@ public class TournamentManager {
             
             // Pemain tersebut mungkin offline, jadi gunakan Bukkit.getOfflinePlayer
             Player player = Bukkit.getPlayer(entry.getPlayerId());
-            
+
             // Tambahkan uang
+            double pendingMoney = 0.0;
             if (money > 0 && plugin.getEconomyManager().isEconomyEnabled()) {
-                plugin.getEconomyManager().depositMoney(Bukkit.getOfflinePlayer(entry.getPlayerId()), money);
+                if (player != null) {
+                    plugin.getEconomyManager().depositMoney(player, money);
+                } else if (!plugin.getEconomyManager().depositMoney(Bukkit.getOfflinePlayer(entry.getPlayerId()), money)) {
+                    pendingMoney = money;
+                }
             }
 
             // Tambahkan ke ringkasan hadiah
-            rewardSummary.append("§6" + position + ". §f" + entry.getPlayerName() + 
+            rewardSummary.append("§6" + position + ". §f" + entry.getPlayerName() +
                     (money > 0 ? " §7- §a" + plugin.getEconomyManager().formatMoney(money) : "") + "\n");
-            
-            // Tambahkan exp (hanya jika online)
+
+            // Tambahkan exp
             if (exp > 0 && player != null) {
                 plugin.getSkillManager().addFishingExp(player, exp);
                 if (plugin.getAuraSkillsHook() != null) {
                     plugin.getAuraSkillsHook().addXp(player, exp);
                 }
             }
-            
-            // Jalankan perintah khusus
-            if (commands != null && !commands.isEmpty()) {
+
+            // Jalankan perintah khusus untuk pemain online
+            if (commands != null && !commands.isEmpty() && player != null) {
                 for (String cmd : commands) {
                     // Ganti placeholder dengan nama pemain
                     String finalCmd = cmd.replace("%player%", entry.getPlayerName());
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
                 }
+            }
+
+            // Jika pemain offline, simpan ke antrian hadiah tertunda
+            if (player == null && (exp > 0 || pendingMoney > 0 || (commands != null && !commands.isEmpty()))) {
+                queueOfflineReward(entry.getPlayerId(), entry.getPlayerName(), exp, commands, pendingMoney);
             }
             
             position++;

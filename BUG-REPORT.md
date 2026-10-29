@@ -48,7 +48,7 @@
   2. Masukkan ikan event ke inventory pemain.
   3. Klik tombol jual pada Event Fish Collector GUI.
   4. Periksa apakah ikan hilang dan saldo tetap nol.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -69,7 +69,7 @@
   2. Kosongkan mainhand.
   3. Lakukan aktivitas memancing sampai menangkap ikan.
   4. Amati apakah NBT durabilitas custom pada pancingan offhand berkurang atau tetap utuh.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -90,7 +90,7 @@
   2. Tangkap ikan dengan skor tertinggi, lalu disconnect dari server.
   3. Tunggu hingga turnamen berakhir.
   4. Login kembali dan periksa apakah hadiah masuk atau gagal di konsol.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -111,7 +111,7 @@
   1. Setel jadwal turnamen di config 2 menit ke depan.
   2. Simulasi lag server atau atur tick delay lebih dari interval menit.
   3. Amati apakah turnamen otomatis aktif tepat waktu saat menit terlewati.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -132,7 +132,7 @@
   2. Kurangi durabilitas pancingan tersebut.
   3. Jalankan `/nf repair` saat memegang pancingan.
   4. Periksa apakah sistem menolak perbaikan.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -153,7 +153,7 @@
   2. Reload konfigurasi `/nf reload`.
   3. Coba pancing dengan umpan tersebut di inventory.
   4. Periksa apakah efek umpan bekerja.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -172,7 +172,7 @@
   1. Aktifkan mode AFK fishing.
   2. Segera ganti item pancingan di hotbar sebelum jeda recast selesai.
   3. Periksa perilaku pesan pembatalan dan konsumsi durabilitas pada item yang baru.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -189,7 +189,7 @@
 - **Cara uji manual**:
   1. Berikan EXP dalam jumlah sangat besar (misal 100.000) ke akun level 1 melalui API/event.
   2. Amati aliran chat dan volume suara yang diterima client.
-- **Status**: BELUM DIUJI
+- **Status**: FIXED
 
 ---
 
@@ -197,14 +197,14 @@
 
 | ID | Severity | Lokasi | Status |
 |---|---|---|---|
-| ID-001 | CRITICAL | `src/main/java/id/nusafishing/gui/EventFishCollectorGUI.java:395` | BELUM DIUJI |
-| ID-002 | CRITICAL | `src/main/java/id/nusafishing/fishing/FishingListener.java:124` | BELUM DIUJI |
-| ID-003 | HIGH | `src/main/java/id/nusafishing/tournament/TournamentManager.java:468` | BELUM DIUJI |
-| ID-004 | HIGH | `src/main/java/id/nusafishing/tournament/TournamentManager.java:200` | BELUM DIUJI |
-| ID-005 | HIGH | `src/main/java/id/nusafishing/commands/NusaFishingCommand.java:775` | BELUM DIUJI |
-| ID-006 | MEDIUM | `src/main/java/id/nusafishing/config/ConfigManager.java:205` | BELUM DIUJI |
-| ID-007 | MEDIUM | `src/main/java/id/nusafishing/fishing/afk/AfkFishingManager.java:255` | BELUM DIUJI |
-| ID-008 | LOW | `src/main/java/id/nusafishing/skills/PlayerSkillManager.java:120` | BELUM DIUJI |
+| ID-001 | CRITICAL | `src/main/java/id/nusafishing/gui/EventFishCollectorGUI.java:395` | FIXED |
+| ID-002 | CRITICAL | `src/main/java/id/nusafishing/fishing/FishingListener.java:124` | FIXED |
+| ID-003 | HIGH | `src/main/java/id/nusafishing/tournament/TournamentManager.java:468` | FIXED |
+| ID-004 | HIGH | `src/main/java/id/nusafishing/tournament/TournamentManager.java:200` | FIXED |
+| ID-005 | HIGH | `src/main/java/id/nusafishing/commands/NusaFishingCommand.java:775` | FIXED |
+| ID-006 | MEDIUM | `src/main/java/id/nusafishing/config/ConfigManager.java:205` | FIXED |
+| ID-007 | MEDIUM | `src/main/java/id/nusafishing/fishing/afk/AfkFishingManager.java:255` | FIXED |
+| ID-008 | LOW | `src/main/java/id/nusafishing/skills/PlayerSkillManager.java:120` | FIXED |
 
 ---
 

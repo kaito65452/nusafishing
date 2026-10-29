@@ -390,15 +390,19 @@ public class EventFishCollectorGUI extends GUI {
 
         int amount = currentItem.getAmount();
         double totalPrice = unitPrice * amount;
-        
+
+        // Verify transaction before removing items to prevent loss
+        if (!economy.depositMoney(player, totalPrice)) {
+            player.sendMessage("§c§l[KOLEKTOR MISTIK] §fTransaksi ekonomi gagal! Ikan tidak dijual.");
+            setupGui();
+            return;
+        }
+
         // Remove the fish from the player's inventory
         player.getInventory().setItem(inventorySlot, null);
-        
+
         // Play collection animation
         playCollectionAnimation();
-        
-        // Add money to the player
-        economy.depositMoney(player, totalPrice);
         
         // Increment the player's streak
         incrementStreak(player.getUniqueId());
@@ -448,30 +452,42 @@ public class EventFishCollectorGUI extends GUI {
             return;
         }
         
-        // Calculate total
+        // Calculate total first without deleting items
         double totalEarnings = 0;
         int totalFishSold = 0;
-        
-        // Process each event fish
+        List<Integer> validSoldSlots = new ArrayList<>();
+
+        // Process each event fish calculation
         for (int slot : eventFishSlots) {
             ItemStack fishItem = player.getInventory().getItem(slot);
-            if (fishItem != null) {
+            if (fishItem != null && isEventFish(fishItem)) {
                 CustomFish fish = getFishFromItem(fishItem);
                 if (fish != null) {
                     double basePrice = fish.getPrice();
                     double premiumPrice = basePrice * EVENT_FISH_PRICE_MULTIPLIER;
-                    
                     totalEarnings += premiumPrice * fishItem.getAmount();
                     totalFishSold += fishItem.getAmount();
-                    
-                    // Remove the fish
-                    player.getInventory().setItem(slot, null);
+                    validSoldSlots.add(slot);
                 }
             }
         }
-        
-        // Add money to the player
-        economy.depositMoney(player, totalEarnings);
+
+        if (totalFishSold == 0) {
+            player.sendMessage("§c§l[KOLEKTOR MISTIK] §fTidak ada ikan mistik yang dapat dijual!");
+            return;
+        }
+
+        // Deposit money before removing items
+        if (!economy.depositMoney(player, totalEarnings)) {
+            player.sendMessage("§c§l[KOLEKTOR MISTIK] §fTransaksi ekonomi gagal! Ikan tidak dijual.");
+            setupGui();
+            return;
+        }
+
+        // Remove the fish only after successful deposit
+        for (int slot : validSoldSlots) {
+            player.getInventory().setItem(slot, null);
+        }
         
         // Increment the player's streak
         incrementStreak(player.getUniqueId());
@@ -634,31 +650,17 @@ public class EventFishCollectorGUI extends GUI {
                 break;
                 
             case ROD_REPAIR:
-                // Find the fishing rod in player's inventory
-                ItemStack rod = player.getInventory().getItemInMainHand();
-                if (rod.getType() != Material.FISHING_ROD) {
-                    // If not holding a rod, check whole inventory
-                    for (ItemStack item : player.getInventory().getContents()) {
-                        if (item != null && item.getType() == Material.FISHING_ROD) {
-                            rod = item;
-                            break;
-                        }
-                    }
-                }
-                
-                // If we found a rod, repair it
-                if (rod != null && rod.getType() == Material.FISHING_ROD) {
-                    // Run repair command
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                            "nusafishing repair " + player.getName());
-                    
-                    // Notify player
-                    player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0));
+                ItemStack mainHand = player.getInventory().getItemInMainHand();
+                ItemStack offHand = player.getInventory().getItemInOffHand();
+                ItemStack rod = (mainHand.getType() == Material.FISHING_ROD) ? mainHand : (offHand.getType() == Material.FISHING_ROD ? offHand : null);
+                if (rod != null && id.nusafishing.fishing.FishingListener.repairRod(player, rod)) {
+                    player.sendMessage("§d§l[KOLEKTOR MISTIK] §aPancingan kamu telah diperbaiki secara gratis!");
+                    player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1.0f, 1.0f);
                 } else {
-                    // Fallback to EXP if no rod found
+                    // Fallback to EXP if no rod found or repair not needed/failed
                     int fallbackExp = 150 * streak;
                     plugin.getSkillManager().addFishingExp(player, fallbackExp);
-                    player.sendMessage("§d§l[BONUS MISTIK] §f" + BonusReward.EXP.getFormatted(fallbackExp) + 
+                    player.sendMessage("§d§l[BONUS MISTIK] §f" + BonusReward.EXP.getFormatted(fallbackExp) +
                                       " §7(tidak ditemukan pancingan)");
                 }
                 break;

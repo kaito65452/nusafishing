@@ -79,6 +79,7 @@ public class NusaFishing extends JavaPlugin {
         
         // Initialize tournament manager
         tournamentManager = new TournamentManager(this);
+        getServer().getPluginManager().registerEvents(tournamentManager, this);
         
         // Initialize rewards manager
         this.rewardsManager = new RewardsManager(this);

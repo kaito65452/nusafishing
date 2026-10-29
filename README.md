@@ -3,8 +3,8 @@
 <div align="center">
 
 ![Java](https://img.shields.io/badge/Java-21%20%7C%2025%20(MR--JAR)-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
-![Paper](https://img.shields.io/badge/Platform-Paper%20%2F%20Purpur%201.21.x+-1E88E5?style=for-the-badge&logo=minecraft&logoColor=white)
-![Release](https://img.shields.io/badge/Release-v1.3%2BSNAPSHOT-00C853?style=for-the-badge)
+![Paper](https://img.shields.io/badge/Platform-Paper%20%2F%20Purpur%201.21.x%20--%2026.3-1E88E5?style=for-the-badge&logo=minecraft&logoColor=white)
+![Release](https://img.shields.io/badge/Release-v1.4%2Bhotfix-00C853?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-GNU%20GPL%20v2-blue?style=for-the-badge)
 
 **An enterprise-grade, RPG-styled fishing system engineered for modern Spigot, Paper, and Purpur Minecraft servers.**
@@ -41,7 +41,7 @@
 
 | Component | Minimum Requirement | Recommended |
 |---|---|---|
-| **Minecraft Server** | Paper / Purpur 1.21.0 | Paper / Purpur 1.21.4+ or 26.2+ |
+| **Minecraft Server** | Paper / Purpur 1.21.0 | Paper / Purpur 1.21.4+ s/d 26.3 |
 | **Java Runtime** | Java 21 | Java 21 or Java 25 |
 | **Economy** | Optional | [Vault](https://www.spigotmc.org/resources/vault.34315/) + Economy plugin |
 | **Textures** | Vanilla Resource Pack | [Nexo](https://nexomc.com) / [Oraxen](https://oraxen.com) / [ItemsAdder](https://itemsadder.dev) |
@@ -329,7 +329,7 @@ cd nusafishing
 
 The compiled multi-release artifact will be generated in:
 ```
-build/libs/nusafishing-1.3+SNAPSHOT+<commit>.jar
+build/libs/nusafishing-1.4+hotfix.jar
 ```
 
 ### Verifying Multi-Release Bytecode

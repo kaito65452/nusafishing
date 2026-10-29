@@ -37,22 +37,4 @@ jobs:
         with:
           files: build/libs/*.jar
           name: "Release ${{ github.ref_name }}"
-          body: |
-            ## NusaFishing ${{ github.ref_name }}
-
-            ### Critical & High Bug Fixes
-            - **[CRIT] Resolved Event Fish Collector Duplication Exploit**: Eliminated 1-second GUI refresh delay, immediately clearing GUI slots and click handlers, and validating inventory slot state before transaction.
-            - **[CRIT] Resolved Shop GUI Money Duplication**: Checked `removeItem()` return value before depositing money, preventing dupes from dropped or desynced item stacks.
-            - **[HIGH] Connected Event Fish Catch Resolution**: Integrated `FishingEventManager.handleEventFishCaught()` into minigame and listener catches, ensuring events award winners, broadcast victories, and end appropriately.
-            - **[HIGH] Event Fish Pricing Model Preserved**: Encapsulated balanced logarithmic pricing and 2M cap inside `CustomFish.getPrice()` for event fish, preventing price formula discard in `createCaughtInstance()`.
-            - **[HIGH] Full Inventory Catch Protection**: Caught fish that cannot fit into a full inventory now drop naturally at the player's feet instead of being silently deleted.
-            - **[HIGH] Custom Texture Fish Selling**: Removed `!meta.hasCustomModelData()` gate in `ShopGUI` and commands, allowing custom texture items (Nexo, Oraxen, ItemsAdder) and CMD=0 fish to be sold.
-
-            ### Medium & Low Stability Improvements
-            - **[MED] Fixed Tier Boost Diminishing Returns**: Replaced dead zero-casting `(int)(0.75)` with proper diminishing progression accumulator.
-            - **[MED] Corrected Rod Stamina Modifier Calculation**: Eliminated double multiplication of rod stamina modifier in `consumeStaminaForFish()`.
-            - **[MED] GUI Drag Event Protection**: Cancelled `InventoryDragEvent` in `GUIListener` to prevent item insertion/cloning in custom menus.
-            - **[MED] Stamina System Hardening**: Fixed stamina reset exploit on reconnect and replaced per-player BukkitTasks with a single global ticker.
-            - **[LOW] PDC Durability Key Synchronization**: Updated both `nusafishing:durability` and legacy keys during rod durability loss and repair.
-            - **[LOW] Statistics Autosave & Hook Cleanup**: Replaced flawed epoch-modulo check with scheduled asynchronous autosaves, batch config saves, and direct hook removal.
           generate_release_notes: true

@@ -190,6 +190,9 @@ public class EventFishCollectorGUI extends GUI {
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
             if (isEventFish(item)) {
+                if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                    continue;
+                }
                 eventFishItems.add(item);
                 slotToItem.put(i, item);
             }
@@ -388,6 +391,12 @@ public class EventFishCollectorGUI extends GUI {
             return;
         }
 
+        if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(currentItem)) {
+            player.sendMessage("§cIkan pemberian admin tidak dapat dijual!");
+            setupGui();
+            return;
+        }
+
         int amount = currentItem.getAmount();
         double totalPrice = unitPrice * amount;
 
@@ -435,8 +444,11 @@ public class EventFishCollectorGUI extends GUI {
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
             if (isEventFish(item)) {
+                if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                    continue;
+                }
                 eventFishSlots.add(i);
-                
+
                 // Track fish types for summary
                 CustomFish fish = getFishFromItem(item);
                 if (fish != null) {
@@ -619,16 +631,18 @@ public class EventFishCollectorGUI extends GUI {
                 break;
                 
             case MONEY:
-                // Give money bonus as percentage of their balance
-                int percentBonus = 5 + (streak * 2); // 5% + 2% per streak
+                // Give money bonus as percentage of their balance (capped for economic safety)
+                int cappedStreak = Math.min(streak, 10);
+                int percentBonus = 5 + (cappedStreak * 2); // 5% + 2% per streak
                 double balance = economy.getBalance(player);
-                double bonus = balance * (percentBonus / 100.0);
-                
+                double calculatedBonus = balance * (percentBonus / 100.0);
+                double bonus = Math.min(calculatedBonus, 25000.0);
+
                 // Add the bonus money
                 economy.depositMoney(player, bonus);
-                
+
                 // Notify player
-                player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(percentBonus) + 
+                player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(percentBonus) +
                                    " §7(" + economy.formatMoney(bonus) + ")");
                 break;
                 

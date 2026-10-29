@@ -267,6 +267,9 @@ public class ShopGUI extends GUI {
         for (int i = 0; i < storage.length; i++) {
             ItemStack item = storage[i];
             if (item != null && isFish(item)) {
+                if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                    continue;
+                }
                 fishSlotIndices.add(i);
                 fishItems.add(item);
             }
@@ -514,6 +517,11 @@ public class ShopGUI extends GUI {
             return;
         }
 
+        if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(currentItem)) {
+            player.sendMessage("§cIkan pemberian admin tidak dapat dijual!");
+            return;
+        }
+
         CustomFish currentFish = getFishFromItem(currentItem);
         if (currentFish == null || !currentFish.getId().equals(fish.getId())) {
             player.sendMessage("§cIkan di inventory telah berubah!");
@@ -557,7 +565,11 @@ public class ShopGUI extends GUI {
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
             if (item == null) continue;
-            
+
+            if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                continue;
+            }
+
             CustomFish fish = getFishFromItem(item);
             if (fish == null) continue;
             

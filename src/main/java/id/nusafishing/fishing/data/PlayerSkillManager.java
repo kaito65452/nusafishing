@@ -50,11 +50,11 @@ public class PlayerSkillManager {
     public void savePlayerData(Player player) {
         UUID playerId = player.getUniqueId();
         String path = playerId.toString();
-        
+
         dataConfig.set(path + ".name", player.getName());
         dataConfig.set(path + ".fishing_level", fishingLevels.getOrDefault(playerId, 1));
         dataConfig.set(path + ".fishing_exp", fishingExperience.getOrDefault(playerId, 0));
-        
+
         try {
             dataConfig.save(dataFile);
         } catch (IOException e) {
@@ -63,7 +63,6 @@ public class PlayerSkillManager {
     }
 
     public void unloadPlayerData(Player player) {
-        if (player == null) return;
         savePlayerData(player);
         UUID playerId = player.getUniqueId();
         fishingLevels.remove(playerId);
@@ -109,6 +108,7 @@ public class PlayerSkillManager {
     }
     
     public void addFishingExp(Player player, int expAmount) {
+        if (player == null || expAmount <= 0) return;
         UUID playerId = player.getUniqueId();
         int currentExp = fishingExperience.getOrDefault(playerId, 0);
         int currentLevel = fishingLevels.getOrDefault(playerId, 1);
@@ -116,19 +116,23 @@ public class PlayerSkillManager {
         int newExp = currentExp + expAmount;
         int expForNextLevel = getExpForNextLevel(currentLevel);
         
+        int initialLevel = currentLevel;
+
         // Check for level up
         while (newExp >= expForNextLevel) {
             newExp -= expForNextLevel;
             currentLevel++;
             expForNextLevel = getExpForNextLevel(currentLevel);
-            
-            // Send level up message and sound
+        }
+
+        fishingExperience.put(playerId, newExp);
+        fishingLevels.put(playerId, currentLevel);
+
+        // Send consolidated level up message and sound once to avoid spam
+        if (currentLevel > initialLevel) {
             player.sendMessage("§a§lLevel Naik! §fSkill memancing kamu naik menjadi level §e" + currentLevel + "§f!");
             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
         }
-        
-        fishingExperience.put(playerId, newExp);
-        fishingLevels.put(playerId, currentLevel);
         
         // Inform player about exp gain
         player.sendMessage("§b+" + expAmount + " Exp Memancing §7(" + newExp + "/" + expForNextLevel + ")");

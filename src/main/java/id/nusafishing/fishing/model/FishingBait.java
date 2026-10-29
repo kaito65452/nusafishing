@@ -135,7 +135,7 @@ public class FishingBait {
      * Checks if the given ItemStack represents this bait.
      */
     public boolean isThisBait(ItemStack item) {
-        if (item == null || item.getType() != material) return false;
+        if (item == null || (material != null && item.getType() != material)) return false;
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
 

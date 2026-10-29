@@ -232,19 +232,27 @@ public class AfkFishingManager implements Listener {
         // Add AuraSkills XP
         plugin.getAuraSkillsHook().addFishingXp(player, fish);
 
+        ItemStack currentRod = player.getInventory().getItemInMainHand();
+        if (currentRod.getType() != Material.FISHING_ROD) {
+            currentRod = player.getInventory().getItemInOffHand();
+        }
+        FishingRod activeCustomRod = (plugin.getFishingListener() != null && currentRod.getType() == Material.FISHING_ROD)
+            ? plugin.getFishingListener().getCustomFishingRod(currentRod)
+            : customRod;
+
         // Consume stamina
-        plugin.getStaminaManager().consumeStaminaForFish(player, fish, customRod);
+        plugin.getStaminaManager().consumeStaminaForFish(player, fish, activeCustomRod);
 
         // Reduce durability
-        if (customRod != null && rodItem != null) {
-            FishingListener.reduceDurability(player, rodItem, FishingListener.DURABILITY_LOSS_ON_CATCH);
+        if (activeCustomRod != null && currentRod != null) {
+            FishingListener.reduceDurability(player, currentRod, FishingListener.DURABILITY_LOSS_ON_CATCH);
         }
 
         // Remove any lingering hooks
         removeHook(player);
 
         // Schedule auto-recast if player remains in AFK mode
-        scheduleAutoRecast(player, rodItem, customRod);
+        scheduleAutoRecast(player, currentRod, activeCustomRod);
     }
 
     /**
@@ -269,6 +277,11 @@ public class AfkFishingManager implements Listener {
                     return;
                 }
 
+                // Resolve current custom rod freshly from the held item to avoid stale closure references
+                FishingRod currentCustomRod = (plugin.getFishingListener() != null)
+                        ? plugin.getFishingListener().getCustomFishingRod(currentRod)
+                        : null;
+
                 // Check stamina
                 if (!plugin.getStaminaManager().hasEnoughStamina(player, FishingListener.CAST_STAMINA_COST)) {
                     disableAfk(player, "Stamina tidak cukup untuk memancing! Auto-fishing dihentikan.");
@@ -276,7 +289,7 @@ public class AfkFishingManager implements Listener {
                 }
 
                 // Check durability
-                if (customRod != null) {
+                if (currentCustomRod != null) {
                     int dur = FishingListener.getRodDurability(currentRod);
                     if (dur <= 0) {
                         disableAfk(player, "Pancingan kamu rusak! Auto-fishing dihentikan.");
@@ -307,7 +320,7 @@ public class AfkFishingManager implements Listener {
                         hook.setVelocity(player.getLocation().getDirection().multiply(1.25));
 
                         // Calculate lure level from rod and bait
-                        int baseLureLevel = customRod != null ? customRod.getLureLevel() : 0;
+                        int baseLureLevel = currentCustomRod != null ? currentCustomRod.getLureLevel() : 0;
                         int extraLure = (bait != null) ? (int) Math.max(0, Math.min(5, Math.round(bait.getAttractionModifier() - 1.0))) : 0;
                         int totalLure = baseLureLevel + extraLure;
 
@@ -327,10 +340,10 @@ public class AfkFishingManager implements Listener {
                         }
 
                         // Consume stamina on cast
-                        plugin.getStaminaManager().consumeStamina(player, FishingListener.CAST_STAMINA_COST, customRod);
+                        plugin.getStaminaManager().consumeStamina(player, FishingListener.CAST_STAMINA_COST, currentCustomRod);
 
                         // Reduce durability on cast
-                        if (customRod != null) {
+                        if (currentCustomRod != null) {
                             FishingListener.reduceDurability(player, currentRod, FishingListener.DURABILITY_LOSS_ON_CAST);
                         }
 

@@ -108,10 +108,12 @@ public class FishingListener implements Listener {
         Player player = event.getPlayer();
         
         // Handle left-click during minigame
-        if (event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_AIR || 
+        if (event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_AIR ||
             event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
             ItemStack heldItem = player.getInventory().getItemInMainHand();
-            
+            if (heldItem.getType() != Material.FISHING_ROD) {
+                heldItem = player.getInventory().getItemInOffHand();
+            }
             if (heldItem.getType() == Material.FISHING_ROD) {
                 if (strikeMinigame.handleClick(player)) {
                     event.setCancelled(true);
@@ -119,20 +121,42 @@ public class FishingListener implements Listener {
             }
         }
     }
-    
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerFish(PlayerFishEvent event) {
         Player player = event.getPlayer();
-        
+
         // IMMEDIATELY cancel ANY fishing events if player is in a minigame - check first before anything else
         if (isPlayerInMinigame(player)) {
             event.setCancelled(true);
             return;
         }
-        
-        ItemStack fishingRod = player.getInventory().getItemInMainHand();
-        
-        if (fishingRod.getType() != Material.FISHING_ROD) {
+
+        ItemStack mainHand = player.getInventory().getItemInMainHand();
+        ItemStack offHand = player.getInventory().getItemInOffHand();
+        ItemStack fishingRod;
+
+        try {
+            if (event.getHand() == org.bukkit.inventory.EquipmentSlot.OFF_HAND) {
+                fishingRod = offHand;
+            } else if (mainHand != null && mainHand.getType() == Material.FISHING_ROD) {
+                fishingRod = mainHand;
+            } else if (offHand != null && offHand.getType() == Material.FISHING_ROD) {
+                fishingRod = offHand;
+            } else {
+                return;
+            }
+        } catch (Throwable t) {
+            if (mainHand != null && mainHand.getType() == Material.FISHING_ROD) {
+                fishingRod = mainHand;
+            } else if (offHand != null && offHand.getType() == Material.FISHING_ROD) {
+                fishingRod = offHand;
+            } else {
+                return;
+            }
+        }
+
+        if (fishingRod == null || fishingRod.getType() != Material.FISHING_ROD) {
             return;
         }
         
@@ -330,11 +354,13 @@ public class FishingListener implements Listener {
     }
     
     public FishingBait selectBaitFromInventory(Player player) {
-        // Prioritaskan umpan yang ada di off hand
+        // Prioritaskan umpan yang ada di off hand jika bukan pancingan
         ItemStack offHandItem = player.getInventory().getItemInOffHand();
-        FishingBait offHandBait = fishingManager.getBaitFromItem(offHandItem);
-        if (offHandBait != null) {
-            return offHandBait;
+        if (offHandItem != null && offHandItem.getType() != Material.FISHING_ROD) {
+            FishingBait offHandBait = fishingManager.getBaitFromItem(offHandItem);
+            if (offHandBait != null) {
+                return offHandBait;
+            }
         }
         
         // Jika tidak ada di off hand, cek seluruh inventory
@@ -641,7 +667,7 @@ public class FishingListener implements Listener {
         return true;
     }
     
-    private FishingRod getCustomFishingRod(ItemStack item) {
+    public FishingRod getCustomFishingRod(ItemStack item) {
         if (item == null) {
             return null;
         }

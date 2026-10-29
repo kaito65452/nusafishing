@@ -11,10 +11,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -33,7 +33,6 @@ import org.bukkit.persistence.PersistentDataType;
 import id.nusafishing.NusaFishing;
 import id.nusafishing.fishing.FishingManager;
 import id.nusafishing.fishing.FishingListener;
-import id.nusafishing.fishing.data.FishingStatisticsManager;
 import id.nusafishing.fishing.model.CustomFish;
 import id.nusafishing.fishing.model.FishingBait;
 import id.nusafishing.fishing.model.FishingRod;
@@ -85,7 +84,6 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§f/nusafishing repair - Perbaiki pancingan di tangan");
                 sender.sendMessage("§f/nusafishing shop - Buka toko untuk beli dan jual");
                 sender.sendMessage("§f/nusafishing afk - Aktifkan/nonaktifkan mode auto-fishing");
-                sender.sendMessage("§f/nusafishing stats [player] - Lihat statistik memancing");
                 
                 if (sender.hasPermission("nusafishing.sell")) {
                     sender.sendMessage("§f/nusafishing sell - Jual ikan di tangan");
@@ -496,16 +494,16 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                         sendTournamentHelp(sender);
                         return true;
                 }
-                
+
             case "stats":
                 if (!sender.hasPermission("nusafishing.stats")) {
                     sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
                     return true;
                 }
-                
+
                 UUID targetUuid;
                 String targetName;
-                
+
                 if (args.length == 1) {
                     if (!(sender instanceof Player)) {
                         sender.sendMessage("§cPenggunaan di console: /nusafishing stats <player>");
@@ -521,14 +519,14 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                             return true;
                         }
                     }
-                    
+
                     Player targetOnline = Bukkit.getPlayer(args[1]);
                     if (targetOnline != null) {
                         targetUuid = targetOnline.getUniqueId();
                         targetName = targetOnline.getName();
                     } else {
                         @SuppressWarnings("deprecation")
-                        OfflinePlayer targetOffline = Bukkit.getOfflinePlayer(args[1]);
+                        org.bukkit.OfflinePlayer targetOffline = Bukkit.getOfflinePlayer(args[1]);
                         if (targetOffline == null || (!targetOffline.hasPlayedBefore() && !targetOffline.isOnline())) {
                             sender.sendMessage("§cPemain tidak ditemukan!");
                             return true;
@@ -536,31 +534,21 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                         targetUuid = targetOffline.getUniqueId();
                         targetName = targetOffline.getName() != null ? targetOffline.getName() : args[1];
                     }
-                    
-                    if (sender instanceof Player) {
-                        Player senderPlayer = (Player) sender;
-                        if (!senderPlayer.getUniqueId().equals(targetUuid)) {
-                            if (!sender.hasPermission("nusafishing.stats.others") && !sender.hasPermission("nusafishing.admin")) {
-                                sender.sendMessage("§cKamu tidak memiliki izin untuk melihat statistik pemain lain!");
-                                return true;
-                            }
-                        }
-                    }
                 }
-                
-                FishingStatisticsManager stats = plugin.getStatisticsManager();
+
+                id.nusafishing.fishing.data.FishingStatisticsManager stats = plugin.getStatisticsManager();
                 if (stats == null) {
                     sender.sendMessage("§cStatistik manajer tidak tersedia!");
                     return true;
                 }
-                
+
                 int totalCaught = stats.getTotalFishCaught(targetUuid);
                 int legendary = stats.getLegendaryFishCaught(targetUuid);
                 int mythic = stats.getMythicFishCaught(targetUuid);
                 int event = stats.getEventFishCaught(targetUuid);
                 double largestWeight = stats.getLargestFishWeight(targetUuid);
                 String largestName = stats.getLargestFishName(targetUuid);
-                
+
                 sender.sendMessage("§b=== Statistik Memancing: §f" + targetName + " §b===");
                 sender.sendMessage("§fTotal Ikan Ditangkap: §a" + totalCaught);
                 sender.sendMessage("§fIkan Legendary: §6" + legendary);
@@ -568,7 +556,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§fIkan Event: §e" + event);
                 sender.sendMessage("§fTangkapan Terbesar: §b" + largestName + " §7(§f" + String.format(java.util.Locale.US, "%.2f", largestWeight) + " kg§7)");
                 return true;
-                
+
             default:
                 sender.sendMessage("§cCommand tidak valid! Gunakan /nusafishing help untuk bantuan.");
                 return true;
@@ -704,13 +692,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Set amount and give to player
         rodItem.setAmount(amount);
-        Map<Integer, ItemStack> rodLeftovers = player.getInventory().addItem(rodItem);
-        if (!rodLeftovers.isEmpty()) {
-            for (ItemStack drop : rodLeftovers.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), drop);
-            }
-            player.sendMessage("§eInventori kamu penuh! Pancingan telah dijatuhkan ke tanah.");
-        }
+        player.getInventory().addItem(rodItem);
         
         player.sendMessage("§aKamu mendapatkan §f" + amount + "x " + rod.getTier().getColor() + rod.getName() + "§a!");
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
@@ -733,13 +715,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Create the bait item and give to player
         ItemStack baitItem = bait.createItemStack(amount);
-        Map<Integer, ItemStack> baitLeftovers = player.getInventory().addItem(baitItem);
-        if (!baitLeftovers.isEmpty()) {
-            for (ItemStack drop : baitLeftovers.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), drop);
-            }
-            player.sendMessage("§eInventori kamu penuh! Umpan telah dijatuhkan ke tanah.");
-        }
+        player.getInventory().addItem(baitItem);
         
         player.sendMessage("§aKamu mendapatkan §f" + amount + "x §a" + bait.getName() + "§a!");
         return true;
@@ -769,7 +745,10 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
      */
     private boolean repairRod(Player player) {
         ItemStack heldItem = player.getInventory().getItemInMainHand();
-        
+        if (heldItem.getType() != Material.FISHING_ROD) {
+            heldItem = player.getInventory().getItemInOffHand();
+        }
+
         // Check if player is holding a fishing rod
         if (heldItem.getType() != Material.FISHING_ROD) {
             player.sendMessage("§cKamu harus memegang pancingan di tangan!");
@@ -778,23 +757,29 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         // Check if it's a custom rod
         ItemMeta meta = heldItem.getItemMeta();
-        if (meta == null || !meta.hasCustomModelData()) {
+        if (meta == null) {
             player.sendMessage("§cIni bukan pancingan custom!");
             return false;
         }
-        
-        // Get rod info from persistent data
+
+        // Get rod info from persistent data or model data fallback
         PersistentDataContainer container = meta.getPersistentDataContainer();
-        NamespacedKey cleanRodKey = NamespacedKey.fromString("nusafishing:rod_id");
-        NamespacedKey dottedRodKey = new NamespacedKey(plugin, ROD_ID_KEY);
-        NamespacedKey cleanDurabilityKey = NamespacedKey.fromString("nusafishing:durability");
-        NamespacedKey dottedDurabilityKey = new NamespacedKey(plugin, ROD_DURABILITY_KEY);
-        
+        NamespacedKey cleanRodIdKey = NamespacedKey.fromString("nusafishing:rod_id");
+        NamespacedKey legacyRodIdKey = new NamespacedKey(plugin, ROD_ID_KEY);
+        NamespacedKey dottedRodIdKey = NamespacedKey.fromString("nusafishing:nusafishing.rod_id");
+
         String rodId = null;
-        if (cleanRodKey != null && container.has(cleanRodKey, PersistentDataType.STRING)) {
-            rodId = container.get(cleanRodKey, PersistentDataType.STRING);
-        } else if (container.has(dottedRodKey, PersistentDataType.STRING)) {
-            rodId = container.get(dottedRodKey, PersistentDataType.STRING);
+        if (cleanRodIdKey != null && container.has(cleanRodIdKey, PersistentDataType.STRING)) {
+            rodId = container.get(cleanRodIdKey, PersistentDataType.STRING);
+        } else if (container.has(legacyRodIdKey, PersistentDataType.STRING)) {
+            rodId = container.get(legacyRodIdKey, PersistentDataType.STRING);
+        } else if (dottedRodIdKey != null && container.has(dottedRodIdKey, PersistentDataType.STRING)) {
+            rodId = container.get(dottedRodIdKey, PersistentDataType.STRING);
+        } else if (meta.hasCustomModelData()) {
+            FishingRod rodByModel = plugin.getFishingManager().getFishingRodByModelData(meta.getCustomModelData());
+            if (rodByModel != null) {
+                rodId = rodByModel.getId();
+            }
         }
 
         if (rodId == null) {
@@ -802,18 +787,14 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             return false;
         }
 
-        int currentDurability = 0;
-        if (cleanDurabilityKey != null && container.has(cleanDurabilityKey, PersistentDataType.INTEGER)) {
-            currentDurability = container.get(cleanDurabilityKey, PersistentDataType.INTEGER);
-        } else if (container.has(dottedDurabilityKey, PersistentDataType.INTEGER)) {
-            currentDurability = container.get(dottedDurabilityKey, PersistentDataType.INTEGER);
-        }
-        
+        // Get rod data
         FishingRod rod = plugin.getFishingManager().getRodById(rodId);
         if (rod == null) {
             player.sendMessage("§cTidak dapat menemukan informasi pancingan!");
             return false;
         }
+
+        int currentDurability = FishingListener.getRodDurability(heldItem);
         
         // Calculate repair cost based on how damaged the rod is
         int maxDurability = rod.getDurability();
@@ -832,17 +813,17 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         if (economy.isEconomyEnabled()) {
             if (!economy.hasMoney(player, repairCost)) {
                 player.sendMessage("§cKamu tidak memiliki cukup uang untuk memperbaiki pancingan ini!");
-                player.sendMessage("§cBiaya perbaikan: §f" + economy.formatMoney(repairCost) + 
+                player.sendMessage("§cBiaya perbaikan: §f" + economy.formatMoney(repairCost) +
                         " §7(Tier " + rod.getTier().getDisplayName() + ")");
                 return false;
             }
-            
+
             // Charge the player
             if (!economy.withdrawMoney(player, repairCost)) {
-                player.sendMessage("§cTransaksi gagal! Tidak dapat menarik biaya perbaikan.");
+                player.sendMessage("§cTransaksi ekonomi gagal! Perbaikan dibatalkan.");
                 return false;
             }
-            player.sendMessage("§aKamu membayar §f" + economy.formatMoney(repairCost) + 
+            player.sendMessage("§aKamu membayar §f" + economy.formatMoney(repairCost) +
                     " §auntuk memperbaiki pancingan §f" + rod.getTier().getColor() + rod.getName());
         }
         
@@ -869,93 +850,94 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
      */
     private boolean sellFish(Player player, boolean sellAll) {
         EconomyManager economy = plugin.getEconomyManager();
-        
+
         if (!economy.isEconomyEnabled()) {
             player.sendMessage("§cFitur ekonomi tidak aktif!");
             return false;
         }
-        
+
         double totalEarnings = 0;
         int totalFishSold = 0;
-        List<Integer> slotsToRemove = new ArrayList<>();
-        Map<String, Integer> fishSold = new HashMap<>();
-        CustomFish singleFish = null;
-        int singleAmount = 0;
-        
+
         if (sellAll) {
-            // Sell all fish in storage inventory
+            // Calculate total earnings and identify fish items first
             ItemStack[] contents = player.getInventory().getStorageContents();
-            
+            Map<String, Integer> fishSold = new HashMap<>();
+            List<Integer> slotsToClear = new ArrayList<>();
+
             for (int i = 0; i < contents.length; i++) {
                 ItemStack item = contents[i];
                 if (item == null) continue;
-                
+
                 CustomFish fish = getFishFromItem(item);
                 if (fish == null) continue;
-                
+
                 double price = economy.calculateFishPrice(fish);
                 double earnings = price * item.getAmount();
                 totalEarnings += earnings;
                 totalFishSold += item.getAmount();
-                
-                // Keep track of fish types sold for price dynamics
+
                 fishSold.put(fish.getId(), fishSold.getOrDefault(fish.getId(), 0) + item.getAmount());
-                slotsToRemove.add(i);
+                slotsToClear.add(i);
             }
-        } else {
-            // Sell only the fish in hand
-            ItemStack handItem = player.getInventory().getItemInMainHand();
-            
-            if (handItem.getType() == Material.AIR) {
-                player.sendMessage("§cKamu tidak memegang ikan!");
+
+            if (totalFishSold == 0) {
+                player.sendMessage("§cTidak ada ikan yang dapat dijual!");
                 return false;
             }
-            
-            CustomFish fish = getFishFromItem(handItem);
-            if (fish == null) {
-                player.sendMessage("§cItem yang kamu pegang bukan ikan hasil pancingan!");
+
+            // Attempt deposit first
+            if (!economy.depositMoney(player, totalEarnings)) {
+                player.sendMessage("§cTransaksi ekonomi gagal! Ikan tidak dijual.");
                 return false;
             }
-            
-            singleFish = fish;
-            singleAmount = handItem.getAmount();
-            double price = economy.calculateFishPrice(fish);
-            totalEarnings = price * singleAmount;
-            totalFishSold = singleAmount;
-        }
-        
-        if (totalFishSold == 0) {
-            player.sendMessage("§cTidak ada ikan yang dapat dijual!");
-            return false;
-        }
-        
-        // Add money to player
-        if (!economy.depositMoney(player, totalEarnings)) {
-            player.sendMessage("§cTransaksi gagal! Uang tidak dapat ditambahkan.");
-            return false;
-        }
-        
-        if (sellAll) {
-            // Remove the fish from inventory
-            for (int slot : slotsToRemove) {
+
+            // Only remove fish after successful deposit
+            for (int slot : slotsToClear) {
                 player.getInventory().setItem(slot, null);
             }
+
             // Update dynamic prices for all fish sold
             for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
                 economy.updateDynamicPrice(entry.getKey(), entry.getValue());
             }
         } else {
+            // Sell only the fish in hand
+            ItemStack handItem = player.getInventory().getItemInMainHand();
+
+            if (handItem.getType() == Material.AIR) {
+                player.sendMessage("§cKamu tidak memegang ikan!");
+                return false;
+            }
+
+            CustomFish fish = getFishFromItem(handItem);
+            if (fish == null) {
+                player.sendMessage("§cItem yang kamu pegang bukan ikan hasil pancingan!");
+                return false;
+            }
+
+            double price = economy.calculateFishPrice(fish);
+            totalEarnings = price * handItem.getAmount();
+            totalFishSold = handItem.getAmount();
+
+            // Attempt deposit first
+            if (!economy.depositMoney(player, totalEarnings)) {
+                player.sendMessage("§cTransaksi ekonomi gagal! Ikan tidak dijual.");
+                return false;
+            }
+
+            // Update dynamic price for this fish
+            economy.updateDynamicPrice(fish.getId(), handItem.getAmount());
+
             // Remove the fish from hand
             player.getInventory().setItemInMainHand(null);
-            // Update dynamic price for this fish
-            economy.updateDynamicPrice(singleFish.getId(), singleAmount);
         }
-        
+
         // Notify player
-        player.sendMessage("§a§lBerhasil! §f" + 
-                "Kamu menjual §b" + totalFishSold + " ikan§f dengan total " + 
+        player.sendMessage("§a§lBerhasil! §f" +
+                "Kamu menjual §b" + totalFishSold + " ikan§f dengan total " +
                 "§a" + economy.formatMoney(totalEarnings) + "§f.");
-        
+
         // Play sound
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         return true;
@@ -1045,25 +1027,14 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
         
         if (args.length == 1) {
-            // Main subcommands
+            // Main subcommands without duplicates
             Set<String> subCommands = new LinkedHashSet<>(Arrays.asList("help", "rod", "bait", "repair",
                     "location", "event", "collector", "sell", "shop", "tournament", "afk", "stats"));
-            if (sender.hasPermission("nusafishing.collector")) {
-                subCommands.add("collector");
-            }
-            if (sender.hasPermission("nusafishing.sell")) {
-                subCommands.add("sell");
-            }
-            
+
             if (sender.hasPermission("nusafishing.admin")) {
                 subCommands.add("reload");
-                subCommands.add("location");
             }
-            
-            if (sender.hasPermission("nusafishing.shop")) {
-                subCommands.add("shop");
-            }
-            
+
             for (String subCommand : subCommands) {
                 if (subCommand.startsWith(args[0].toLowerCase())) {
                     completions.add(subCommand);

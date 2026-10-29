@@ -2,6 +2,7 @@
 name: debugger
 description: Investigate errors, stack traces, and unexpected behavior to isolate root causes.
 tools: Read, Grep, Glob, Bash
+# PERINGATAN: model worker-combo wajib diganti jika memakai Claude Code resmi (custom 9router model).
 model: worker-combo
 ---
 Debugging specialist.

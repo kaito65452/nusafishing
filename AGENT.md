@@ -30,3 +30,9 @@ Setiap kali diminta melakukan review logika atau perencanaan, berikan respons de
 3. **[Refactoring / Implementation Plan]**: Langkah konkret perbaikan kode atau rancangan class/method baru.
 4. **[Test Scenarios]**: Daftar test case (Unit Test dengan MockBukkit/JUnit 5 atau In-Game QA Checklist) untuk memvalidasi logika.
 
+# ⚠️ Peringatan Model Agent (.claude/agents)
+Definisi subagent di `.claude/agents/*.md` (`bug-hunter`, `code-writer`, `debugger`, `reviewer`) dikonfigurasi dengan `model: worker-combo`.
+- `worker-combo` adalah custom model combo dari endpoint **9router**.
+- **Wajib diganti** (misalnya menjadi `haiku`, `sonnet`, `opus`, atau baris `model:` dihapus agar menggunakan default session model) jika menjalankan **Claude Code** resmi / direct Anthropic API, karena model `worker-combo` tidak dikenali oleh Anthropic API standar.
+
+

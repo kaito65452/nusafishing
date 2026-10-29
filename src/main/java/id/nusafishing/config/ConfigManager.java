@@ -136,6 +136,10 @@ public class ConfigManager {
     }
     
     public void loadFishingConfig() {
+        fishingRods.clear();
+        fishingBaits.clear();
+        customFishes.clear();
+
         // Load fishing rods
         ConfigurationSection rodsSection = fishingConfig.getConfigurationSection("fishing_rods");
         if (rodsSection != null) {

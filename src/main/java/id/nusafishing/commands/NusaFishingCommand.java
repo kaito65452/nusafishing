@@ -3,8 +3,10 @@ package id.nusafishing.commands;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.bukkit.Location;
@@ -759,7 +761,10 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             }
             
             // Charge the player
-            economy.withdrawMoney(player, repairCost);
+            if (!economy.withdrawMoney(player, repairCost)) {
+                player.sendMessage("§cTransaksi gagal! Tidak dapat menarik biaya perbaikan.");
+                return false;
+            }
             player.sendMessage("§aKamu membayar §f" + economy.formatMoney(repairCost) + 
                     " §auntuk memperbaiki pancingan §f" + rod.getTier().getColor() + rod.getName());
         }
@@ -795,11 +800,14 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         double totalEarnings = 0;
         int totalFishSold = 0;
+        List<Integer> slotsToRemove = new ArrayList<>();
+        Map<String, Integer> fishSold = new HashMap<>();
+        CustomFish singleFish = null;
+        int singleAmount = 0;
         
         if (sellAll) {
             // Sell all fish in storage inventory
             ItemStack[] contents = player.getInventory().getStorageContents();
-            Map<String, Integer> fishSold = new HashMap<>();
             
             for (int i = 0; i < contents.length; i++) {
                 ItemStack item = contents[i];
@@ -815,14 +823,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 
                 // Keep track of fish types sold for price dynamics
                 fishSold.put(fish.getId(), fishSold.getOrDefault(fish.getId(), 0) + item.getAmount());
-                
-                // Remove the fish from inventory
-                player.getInventory().setItem(i, null);
-            }
-            
-            // Update dynamic prices for all fish sold
-            for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
-                economy.updateDynamicPrice(entry.getKey(), entry.getValue());
+                slotsToRemove.add(i);
             }
         } else {
             // Sell only the fish in hand
@@ -839,15 +840,11 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 return false;
             }
             
+            singleFish = fish;
+            singleAmount = handItem.getAmount();
             double price = economy.calculateFishPrice(fish);
-            totalEarnings = price * handItem.getAmount();
-            totalFishSold = handItem.getAmount();
-            
-            // Update dynamic price for this fish
-            economy.updateDynamicPrice(fish.getId(), handItem.getAmount());
-            
-            // Remove the fish from hand
-            player.getInventory().setItemInMainHand(null);
+            totalEarnings = price * singleAmount;
+            totalFishSold = singleAmount;
         }
         
         if (totalFishSold == 0) {
@@ -856,7 +853,26 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         }
         
         // Add money to player
-        economy.depositMoney(player, totalEarnings);
+        if (!economy.depositMoney(player, totalEarnings)) {
+            player.sendMessage("§cTransaksi gagal! Uang tidak dapat ditambahkan.");
+            return false;
+        }
+        
+        if (sellAll) {
+            // Remove the fish from inventory
+            for (int slot : slotsToRemove) {
+                player.getInventory().setItem(slot, null);
+            }
+            // Update dynamic prices for all fish sold
+            for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
+                economy.updateDynamicPrice(entry.getKey(), entry.getValue());
+            }
+        } else {
+            // Remove the fish from hand
+            player.getInventory().setItemInMainHand(null);
+            // Update dynamic price for this fish
+            economy.updateDynamicPrice(singleFish.getId(), singleAmount);
+        }
         
         // Notify player
         player.sendMessage("§a§lBerhasil! §f" + 
@@ -953,7 +969,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         
         if (args.length == 1) {
             // Main subcommands
-            List<String> subCommands = new ArrayList<>(Arrays.asList("help", "rod", "bait", "repair",
+            Set<String> subCommands = new LinkedHashSet<>(Arrays.asList("help", "rod", "bait", "repair",
                     "location", "event", "collector", "sell", "shop", "tournament", "afk"));
             if (sender.hasPermission("nusafishing.collector")) {
                 subCommands.add("collector");

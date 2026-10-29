@@ -523,11 +523,14 @@ public class ShopGUI extends GUI {
         int amount = currentItem.getAmount();
         double totalPrice = unitPrice * amount;
 
+        // Verify deposit before removing item
+        if (!economy.depositMoney(player, totalPrice)) {
+            player.sendMessage("§cTransaksi gagal! Uang tidak dapat ditambahkan.");
+            return;
+        }
+
         // Remove the item directly from the storage slot
         player.getInventory().setItem(storageSlot, null);
-
-        // Add money to the player
-        economy.depositMoney(player, totalPrice);
 
         // Update dynamic price for this fish
         economy.updateDynamicPrice(fish.getId(), amount);
@@ -546,6 +549,7 @@ public class ShopGUI extends GUI {
     private void sellAllFish() {
         ItemStack[] contents = player.getInventory().getStorageContents();
         Map<String, Integer> fishSold = new HashMap<>();
+        List<Integer> slotsToRemove = new ArrayList<>();
         double totalEarnings = 0;
         int totalFishSold = 0;
         
@@ -564,23 +568,29 @@ public class ShopGUI extends GUI {
             
             // Keep track of fish types sold for price dynamics
             fishSold.put(fish.getId(), fishSold.getOrDefault(fish.getId(), 0) + item.getAmount());
-            
-            // Remove the fish from inventory
-            player.getInventory().setItem(i, null);
+            slotsToRemove.add(i);
         }
         
         if (totalFishSold == 0) {
             player.sendMessage("§cTidak ada ikan yang dapat dijual!");
             return;
         }
+
+        // Add money to player
+        if (!economy.depositMoney(player, totalEarnings)) {
+            player.sendMessage("§cTransaksi gagal! Uang tidak dapat ditambahkan.");
+            return;
+        }
+
+        // Remove the fish from inventory only after deposit succeeds
+        for (int slot : slotsToRemove) {
+            player.getInventory().setItem(slot, null);
+        }
         
         // Update dynamic prices for all fish sold
         for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
             economy.updateDynamicPrice(entry.getKey(), entry.getValue());
         }
-        
-        // Add money to player
-        economy.depositMoney(player, totalEarnings);
         
         // Notify player
         player.sendMessage("§a§lBerhasil! §fKamu menjual §b" + totalFishSold + " ikan§f dengan total " 

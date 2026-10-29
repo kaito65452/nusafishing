@@ -15,6 +15,8 @@ import org.bukkit.entity.FishHook;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.event.player.PlayerFishEvent.State;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -85,6 +87,20 @@ public class FishingListener implements Listener {
         strikeMinigame.cleanupPlayer(player);
         activeBaits.remove(playerId);
         lastCastTime.remove(playerId);
+    }
+    
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getEntity();
+        strikeMinigame.cleanupPlayer(player);
+        activeBaits.remove(player.getUniqueId());
+    }
+    
+    @EventHandler
+    public void onPlayerChangedWorld(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        strikeMinigame.cleanupPlayer(player);
+        activeBaits.remove(player.getUniqueId());
     }
     
     @EventHandler

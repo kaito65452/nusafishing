@@ -99,19 +99,21 @@ public class CustomFish {
     
     // Create a new caught fish instance with random weight and quality
     public CustomFish createCaughtInstance(int tierBoost, double qualityBoost, double weightBoost, double maxWeight) {
+        double effectiveMaxWeight = Math.max(minWeight, Math.min(this.maxWeight, maxWeight));
         CustomFish fish = new CustomFish(id, name, description, material, customModelData,
-                textureProvider, textureId, minWeight, maxWeight, minQuality, maxQuality, basePrice, baseTier);
+                textureProvider, textureId, minWeight, effectiveMaxWeight, minQuality, maxQuality, basePrice, baseTier);
         
         // Generate random weight with boost applied
-        double weightRange = Math.min(this.maxWeight, maxWeight) - minWeight;
-        double boostedMaxWeight = minWeight + (weightRange * weightBoost);
+        double weightRange = Math.max(0.0, effectiveMaxWeight - minWeight);
+        double boostedMaxWeight = minWeight + (weightRange * Math.max(0.0, weightBoost));
         
         double randomValue = Math.pow(random.nextDouble(), 0.7);
-        fish.weight = minWeight + (randomValue * (boostedMaxWeight - minWeight));
+        fish.weight = minWeight + (randomValue * Math.max(0.0, boostedMaxWeight - minWeight));
         
         // Apply quality boost
-        int boostedMaxQuality = Math.min(100, (int)(maxQuality * qualityBoost));
-        fish.quality = minQuality + random.nextInt(boostedMaxQuality - minQuality + 1);
+        int boostedMaxQuality = Math.max(minQuality, Math.min(100, (int)(maxQuality * qualityBoost)));
+        int qualityRange = Math.max(1, boostedMaxQuality - minQuality + 1);
+        fish.quality = minQuality + random.nextInt(qualityRange);
         
         // Calculate actual tier and ENSURE it's never null
         FishTier calculatedTier = calculateActualTier(fish.quality, fish.weight, tierBoost);
@@ -198,18 +200,22 @@ public class CustomFish {
         // - Linear sampai 10kg
         // - Logaritmik dari 10kg-100kg
         // - Akar kuadrat di atas 100kg (drastis mengurangi returns)
+        double avgWeight = (minWeight + Math.min(10.0, maxWeight)) / 2.0;
+        double factorAt10 = avgWeight > 0.0 ? (10.0 / avgWeight) : 1.0;
+        double factorAt100 = factorAt10 + 2.0; // factorAt10 + (Math.log10(100.0 / 10.0) * 2.0)
+
         double weightFactor;
-        if (weight <= 10.0) {
+        if (avgWeight <= 0.0) {
+            weightFactor = 1.0;
+        } else if (weight <= 10.0) {
             // Untuk ikan kecil, faktor linier (normal)
-            weightFactor = weight / ((minWeight + Math.min(10.0, maxWeight)) / 2);
+            weightFactor = weight / avgWeight;
         } else if (weight <= 100.0) {
             // Untuk ikan medium, logaritmik (pertumbuhan melambat)
-            double baseWeight = 10.0;
-            weightFactor = 1.0 + (Math.log10(weight / baseWeight) * 2.0);
+            weightFactor = factorAt10 + (Math.log10(weight / 10.0) * 2.0);
         } else {
             // Untuk ikan besar, akar kuadrat (drastis melambat)
-            double baseWeight = 100.0;
-            weightFactor = 3.0 + (Math.sqrt(weight / baseWeight) * 0.5);
+            weightFactor = factorAt100 + ((Math.sqrt(weight / 100.0) - 1.0) * 0.5);
         }
         
         // 3. Faktor kesulitan penangkapan - ikan dengan weight mendekati max capacity lebih berharga

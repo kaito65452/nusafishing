@@ -468,6 +468,8 @@ public class FishingManager {
             }
         }
 
+        double maxPossibleWeight = rod != null ? rod.getMaxWeightCapacity() : 100.0;
+
         // IMPORTANT: If no fish matches criteria, return at least a common fish
         // This ensures vanilla rods always catch something
         if (availableFish.isEmpty()) {
@@ -476,7 +478,7 @@ public class FishingManager {
                 defaultFish = configManager.getCustomFishes().values().iterator().next();
             }
             if (defaultFish != null) {
-                return defaultFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost);
+                return defaultFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
             }
         }
         
@@ -488,7 +490,6 @@ public class FishingManager {
             for (int i = 0; i < availableFish.size(); i++) {
                 cumulativeWeight += fishWeights.get(i);
                 if (randomValue <= cumulativeWeight) {
-                    double maxPossibleWeight = rod != null ? rod.getMaxWeightCapacity() : 100.0;
                     return availableFish.get(i).createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
                 }
             }
@@ -500,7 +501,7 @@ public class FishingManager {
             fallbackFish = configManager.getCustomFishes().values().iterator().next();
         }
         if (fallbackFish != null) {
-            return fallbackFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost);
+            return fallbackFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
         }
         return null;
     }

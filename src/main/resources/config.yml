@@ -1,5 +1,19 @@
 # NusaFishing Main Configuration
-config_version: "1.4"
+config_version: "1.5"
+
+# Give command settings (/nf give)
+give:
+  # Batas maksimal jumlah item yang dapat diberikan per perintah / klik GUI
+  max-amount: 64
+  # Apakah ikan hasil give admin dapat dijual di toko / kolektor
+  admin-fish-sellable: false
+  # Drop ke tanah jika inventori pemain penuh saat give (false = batalkan dan beri pesan)
+  drop-if-full: false
+
+# Fishbook catalog settings (/nf fishbook)
+fishbook:
+  # Menampilkan ikan event dalam fishbook
+  include-event-fish: true
 
 # AuraSkills Integration
 # Wiki: https://wiki.aurelium.dev/auraskills/api

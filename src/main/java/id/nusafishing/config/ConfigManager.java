@@ -365,4 +365,20 @@ public class ConfigManager {
     public Map<String, CustomFish> getCustomFishes() {
         return customFishes;
     }
+
+    public int getGiveMaxAmount() {
+        return Math.max(1, plugin.getConfig().getInt("give.max-amount", 64));
+    }
+
+    public boolean isAdminFishSellable() {
+        return plugin.getConfig().getBoolean("give.admin-fish-sellable", false);
+    }
+
+    public boolean isGiveDropIfFull() {
+        return plugin.getConfig().getBoolean("give.drop-if-full", false);
+    }
+
+    public boolean isFishbookIncludeEventFish() {
+        return plugin.getConfig().getBoolean("fishbook.include-event-fish", true);
+    }
 }

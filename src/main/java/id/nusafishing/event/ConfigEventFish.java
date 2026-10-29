@@ -172,6 +172,13 @@ public class ConfigEventFish {
     }
 
     /**
+     * Get all loaded event fish.
+     */
+    public static Map<String, ConfigEventFish> getEventFishMap() {
+        return java.util.Collections.unmodifiableMap(eventFishMap);
+    }
+
+    /**
      * Get an event fish configuration by ID.
      */
     public static ConfigEventFish getEventFish(String id) {

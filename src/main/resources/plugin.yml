@@ -34,6 +34,8 @@ permissions:
       nusafishing.sell: true
       nusafishing.shop: true
       nusafishing.afk: true
+      nusafishing.stats: true
+      nusafishing.stats.others: true
   nusafishing.admin.reload:
     description: Izin untuk memuat ulang konfigurasi
     default: op
@@ -51,4 +53,10 @@ permissions:
     default: true
   nusafishing.admin.tournament:
     description: Izin untuk mengelola turnamen memancing
+    default: op
+  nusafishing.stats:
+    description: Izin untuk melihat statistik memancing diri sendiri
+    default: true
+  nusafishing.stats.others:
+    description: Izin untuk melihat statistik pemain lain
     default: op

@@ -7,11 +7,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.command.Command;
@@ -30,6 +33,7 @@ import org.bukkit.persistence.PersistentDataType;
 import id.nusafishing.NusaFishing;
 import id.nusafishing.fishing.FishingManager;
 import id.nusafishing.fishing.FishingListener;
+import id.nusafishing.fishing.data.FishingStatisticsManager;
 import id.nusafishing.fishing.model.CustomFish;
 import id.nusafishing.fishing.model.FishingBait;
 import id.nusafishing.fishing.model.FishingRod;
@@ -81,6 +85,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§f/nusafishing repair - Perbaiki pancingan di tangan");
                 sender.sendMessage("§f/nusafishing shop - Buka toko untuk beli dan jual");
                 sender.sendMessage("§f/nusafishing afk - Aktifkan/nonaktifkan mode auto-fishing");
+                sender.sendMessage("§f/nusafishing stats [player] - Lihat statistik memancing");
                 
                 if (sender.hasPermission("nusafishing.sell")) {
                     sender.sendMessage("§f/nusafishing sell - Jual ikan di tangan");
@@ -491,6 +496,78 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                         sendTournamentHelp(sender);
                         return true;
                 }
+                
+            case "stats":
+                if (!sender.hasPermission("nusafishing.stats")) {
+                    sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+                    return true;
+                }
+                
+                UUID targetUuid;
+                String targetName;
+                
+                if (args.length == 1) {
+                    if (!(sender instanceof Player)) {
+                        sender.sendMessage("§cPenggunaan di console: /nusafishing stats <player>");
+                        return true;
+                    }
+                    Player player = (Player) sender;
+                    targetUuid = player.getUniqueId();
+                    targetName = player.getName();
+                } else {
+                    if (sender instanceof Player && !args[1].equalsIgnoreCase(sender.getName())) {
+                        if (!sender.hasPermission("nusafishing.stats.others") && !sender.hasPermission("nusafishing.admin")) {
+                            sender.sendMessage("§cKamu tidak memiliki izin untuk melihat statistik pemain lain!");
+                            return true;
+                        }
+                    }
+                    
+                    Player targetOnline = Bukkit.getPlayer(args[1]);
+                    if (targetOnline != null) {
+                        targetUuid = targetOnline.getUniqueId();
+                        targetName = targetOnline.getName();
+                    } else {
+                        @SuppressWarnings("deprecation")
+                        OfflinePlayer targetOffline = Bukkit.getOfflinePlayer(args[1]);
+                        if (targetOffline == null || (!targetOffline.hasPlayedBefore() && !targetOffline.isOnline())) {
+                            sender.sendMessage("§cPemain tidak ditemukan!");
+                            return true;
+                        }
+                        targetUuid = targetOffline.getUniqueId();
+                        targetName = targetOffline.getName() != null ? targetOffline.getName() : args[1];
+                    }
+                    
+                    if (sender instanceof Player) {
+                        Player senderPlayer = (Player) sender;
+                        if (!senderPlayer.getUniqueId().equals(targetUuid)) {
+                            if (!sender.hasPermission("nusafishing.stats.others") && !sender.hasPermission("nusafishing.admin")) {
+                                sender.sendMessage("§cKamu tidak memiliki izin untuk melihat statistik pemain lain!");
+                                return true;
+                            }
+                        }
+                    }
+                }
+                
+                FishingStatisticsManager stats = plugin.getStatisticsManager();
+                if (stats == null) {
+                    sender.sendMessage("§cStatistik manajer tidak tersedia!");
+                    return true;
+                }
+                
+                int totalCaught = stats.getTotalFishCaught(targetUuid);
+                int legendary = stats.getLegendaryFishCaught(targetUuid);
+                int mythic = stats.getMythicFishCaught(targetUuid);
+                int event = stats.getEventFishCaught(targetUuid);
+                double largestWeight = stats.getLargestFishWeight(targetUuid);
+                String largestName = stats.getLargestFishName(targetUuid);
+                
+                sender.sendMessage("§b=== Statistik Memancing: §f" + targetName + " §b===");
+                sender.sendMessage("§fTotal Ikan Ditangkap: §a" + totalCaught);
+                sender.sendMessage("§fIkan Legendary: §6" + legendary);
+                sender.sendMessage("§fIkan Mythic: §d" + mythic);
+                sender.sendMessage("§fIkan Event: §e" + event);
+                sender.sendMessage("§fTangkapan Terbesar: §b" + largestName + " §7(§f" + String.format(java.util.Locale.US, "%.2f", largestWeight) + " kg§7)");
+                return true;
                 
             default:
                 sender.sendMessage("§cCommand tidak valid! Gunakan /nusafishing help untuk bantuan.");
@@ -970,7 +1047,7 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             // Main subcommands
             Set<String> subCommands = new LinkedHashSet<>(Arrays.asList("help", "rod", "bait", "repair",
-                    "location", "event", "collector", "sell", "shop", "tournament", "afk"));
+                    "location", "event", "collector", "sell", "shop", "tournament", "afk", "stats"));
             if (sender.hasPermission("nusafishing.collector")) {
                 subCommands.add("collector");
             }
@@ -993,7 +1070,12 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 }
             }
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("sell") && sender.hasPermission("nusafishing.sell")) {
+            if (args[0].equalsIgnoreCase("stats")) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                        .collect(Collectors.toList());
+            } else if (args[0].equalsIgnoreCase("sell") && sender.hasPermission("nusafishing.sell")) {
                 completions.add("all");
             } else if (args[0].equalsIgnoreCase("rod") && sender.hasPermission("nusafishing.rod")) {
                 // Rod tab completion logic (existing code)

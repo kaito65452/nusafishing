@@ -28,6 +28,12 @@ permissions:
     default: op
     children:
       nusafishing.admin.reload: true
+      nusafishing.give: true
+      nusafishing.give.fish: true
+      nusafishing.give.bait: true
+      nusafishing.give.rod: true
+      nusafishing.view: true
+      nusafishing.fishbook: true
       nusafishing.rod: true
       nusafishing.bait: true
       nusafishing.repair: true
@@ -60,3 +66,25 @@ permissions:
   nusafishing.stats.others:
     description: Izin untuk melihat statistik pemain lain
     default: op
+  nusafishing.give:
+    description: Izin induk untuk memberikan ikan, umpan, atau pancingan
+    default: op
+    children:
+      nusafishing.give.fish: true
+      nusafishing.give.bait: true
+      nusafishing.give.rod: true
+  nusafishing.give.fish:
+    description: Izin untuk memberikan ikan custom (/nf give fish)
+    default: op
+  nusafishing.give.bait:
+    description: Izin untuk memberikan umpan custom (/nf give bait)
+    default: op
+  nusafishing.give.rod:
+    description: Izin untuk memberikan pancingan custom (/nf give rod)
+    default: op
+  nusafishing.view:
+    description: Izin untuk melihat katalog item (/nf view)
+    default: true
+  nusafishing.fishbook:
+    description: Izin untuk membuka buku koleksi ikan (/nf fishbook)
+    default: true

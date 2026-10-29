@@ -2,6 +2,7 @@ package id.nusafishing.commands;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,6 +41,13 @@ import id.nusafishing.util.ItemBuilder;
 import id.nusafishing.economy.EconomyManager;
 import id.nusafishing.gui.ShopGUI;
 import id.nusafishing.gui.EventFishCollectorGUI;
+import id.nusafishing.gui.GuiSecurityUtils;
+import id.nusafishing.gui.GUI;
+import id.nusafishing.gui.catalog.GiveCatalogGUI;
+import id.nusafishing.gui.catalog.ViewCatalogGUI;
+import id.nusafishing.gui.fishbook.FishbookGUI;
+import id.nusafishing.managers.GiveManager.GiveType;
+import id.nusafishing.event.ConfigEventFish;
 import id.nusafishing.event.EventFish;
 import id.nusafishing.event.EventType;
 import id.nusafishing.tournament.TournamentManager;
@@ -79,17 +87,23 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             case "help":
                 // Tampilkan bantuan
                 sender.sendMessage("§b=== NusaFishing Commands ===");
-                sender.sendMessage("§f/nusafishing rod <id> [jumlah] - Dapatkan pancingan");
-                sender.sendMessage("§f/nusafishing bait <id> [jumlah] - Dapatkan umpan");
+                sender.sendMessage("§f/nusafishing fishbook - Buka katalog buku ikan");
+                sender.sendMessage("§f/nusafishing view <fish|bait|rod> [id] - Lihat detail item katalog");
+                sender.sendMessage("§f/nusafishing rod [id] [jumlah] - Dapatkan pancingan");
+                sender.sendMessage("§f/nusafishing bait [id] [jumlah] - Dapatkan umpan");
                 sender.sendMessage("§f/nusafishing repair - Perbaiki pancingan di tangan");
                 sender.sendMessage("§f/nusafishing shop - Buka toko untuk beli dan jual");
                 sender.sendMessage("§f/nusafishing afk - Aktifkan/nonaktifkan mode auto-fishing");
-                
+
+                if (sender.hasPermission("nusafishing.give") || sender.hasPermission("nusafishing.admin")) {
+                    sender.sendMessage("§f/nusafishing give <fish|bait|rod> [id] [jumlah] [pemain] - Berikan item");
+                }
+
                 if (sender.hasPermission("nusafishing.sell")) {
                     sender.sendMessage("§f/nusafishing sell - Jual ikan di tangan");
                     sender.sendMessage("§f/nusafishing sell all - Jual semua ikan di inventory");
                 }
-                
+
                 if (sender.hasPermission("nusafishing.admin")) {
                     sender.sendMessage("§f/nusafishing reload - Muat ulang konfigurasi");
                     sender.sendMessage("§f/nusafishing location list - Lihat lokasi spesial");
@@ -98,83 +112,36 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage("§f/nusafishing location delete <id> - Hapus lokasi spesial");
                 }
                 return true;
-                
+
+            case "give":
+                return handleGiveCommand(sender, args);
+
+            case "view":
+                return handleViewCommand(sender, args);
+
+            case "fishbook":
+                return handleFishbookCommand(sender, args);
+
             case "rod":
-                // Berikan pancingan
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cCommand ini hanya dapat digunakan oleh player!");
-                    return true;
-                }
-                
-                if (!sender.hasPermission("nusafishing.rod")) {
-                    sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
-                    return true;
-                }
-                
-                if (args.length < 2) {
-                    sender.sendMessage("§cPenggunaan: /nusafishing rod <id> [jumlah]");
-                    return true;
-                }
-                
-                String rodId = args[1].toLowerCase();
-                int rodAmount = 1;
-                
-                if (args.length > 2) {
-                    try {
-                        rodAmount = Integer.parseInt(args[2]);
-                        if (rodAmount < 1) rodAmount = 1;
-                        if (rodAmount > 64) rodAmount = 64;
-                    } catch (NumberFormatException e) {
-                        sender.sendMessage("§cJumlah harus berupa angka!");
-                        return true;
-                    }
-                }
-                
-                return giveRod((Player) sender, rodId, rodAmount);
-                
+                return handleRodCommand(sender, args);
+
             case "bait":
-                // Berikan umpan
-                if (!(sender instanceof Player)) {
-                    sender.sendMessage("§cCommand ini hanya dapat digunakan oleh player!");
-                    return true;
-                }
-                
-                if (!sender.hasPermission("nusafishing.bait")) {
-                    sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
-                    return true;
-                }
-                
-                if (args.length < 2) {
-                    sender.sendMessage("§cPenggunaan: /nusafishing bait <id> [jumlah]");
-                    return true;
-                }
-                
-                String baitId = args[1].toLowerCase();
-                int baitAmount = 1;
-                
-                if (args.length > 2) {
-                    try {
-                        baitAmount = Integer.parseInt(args[2]);
-                        if (baitAmount < 1) baitAmount = 1;
-                        if (baitAmount > 64) baitAmount = 64;
-                    } catch (NumberFormatException e) {
-                        sender.sendMessage("§cJumlah harus berupa angka!");
-                        return true;
-                    }
-                }
-                
-                return giveBait((Player) sender, baitId, baitAmount);
-                
+                return handleBaitCommand(sender, args);
+
             case "reload":
                 if (!sender.hasPermission("nusafishing.admin.reload")) {
                     sender.sendMessage("§cKamu tidak memiliki izin untuk melakukan ini!");
                     return true;
                 }
-                
+
                 sender.sendMessage("§aMereload konfigurasi plugin...");
-                
+
+                // Tutup semua GUI terbuka sebelum reload
+                GUI.closeAll();
+
                 // Use the new method that properly reloads from disk
                 plugin.getConfigManager().reloadConfigs();
+                ConfigEventFish.loadFromConfig(plugin);
                 
                 // Also reload other dependent systems
                 fishingManager.reloadConfig();
@@ -672,53 +639,233 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage("§aLokasi memancing spesial '§b" + name + "§a' (ID: " + locationId + ") berhasil dihapus!");
         return true;
     }
-    
-    /**
-     * Give a player a custom fishing rod
-     * @param player The player to give the rod to
-     * @param rodId The ID of the rod in the configuration
-     * @param amount The amount of rods to give
-     * @return true if successful
-     */
-    private boolean giveRod(Player player, String rodId, int amount) {
-        FishingRod rod = plugin.getConfigManager().getFishingRods().get(rodId);
-        if (rod == null) {
-            player.sendMessage("§cPancingan dengan ID '" + rodId + "' tidak ditemukan!");
+
+    private boolean hasGivePermission(CommandSender sender, GiveType type) {
+        if (sender.hasPermission("nusafishing.admin") || sender.hasPermission("nusafishing.give")) {
+            return true;
+        }
+        if (type == null) {
             return false;
         }
-        
-        // Create the fishing rod item
-        ItemStack rodItem = rod.createItemStack();
-        
-        // Set amount and give to player
-        rodItem.setAmount(amount);
-        player.getInventory().addItem(rodItem);
-        
-        player.sendMessage("§aKamu mendapatkan §f" + amount + "x " + rod.getTier().getColor() + rod.getName() + "§a!");
-        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+        switch (type) {
+            case FISH:
+                return sender.hasPermission("nusafishing.give.fish");
+            case BAIT:
+                return sender.hasPermission("nusafishing.give.bait") || sender.hasPermission("nusafishing.bait");
+            case ROD:
+                return sender.hasPermission("nusafishing.give.rod") || sender.hasPermission("nusafishing.rod");
+            default:
+                return false;
+        }
+    }
+
+    private Integer parseAmount(String input, CommandSender sender) {
+        try {
+            int amount = Integer.parseInt(input);
+            if (amount <= 0) {
+                sender.sendMessage("§cJumlah harus berupa angka positif!");
+                return null;
+            }
+            int maxAmount = plugin.getConfigManager().getGiveMaxAmount();
+            if (amount > maxAmount) {
+                sender.sendMessage("§cJumlah melebihi batas maksimal (" + maxAmount + ")!");
+                return null;
+            }
+            return amount;
+        } catch (NumberFormatException e) {
+            sender.sendMessage("§cJumlah harus berupa angka yang valid!");
+            return null;
+        }
+    }
+
+    private boolean handleGiveCommand(CommandSender sender, String[] args) {
+        // Syntax: /nf give <fish|bait|rod> [id] [amount] [player]
+        if (args.length < 2) {
+            sender.sendMessage("§cPenggunaan: /nusafishing give <fish|bait|rod> [id] [amount] [player]");
+            return true;
+        }
+
+        GiveType giveType = GiveType.fromString(args[1]);
+        if (giveType == null) {
+            sender.sendMessage("§cTipe tidak valid! Gunakan: fish, bait, atau rod.");
+            return true;
+        }
+
+        if (!hasGivePermission(sender, giveType)) {
+            sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+            return true;
+        }
+
+        // Jika <id> tidak diberikan: buka GUI Give (khusus pemain)
+        if (args.length == 2) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cConsole harus menyertakan <id> dan [player]!");
+                return true;
+            }
+            new GiveCatalogGUI((Player) sender, plugin, giveType).open();
+            return true;
+        }
+
+        String id = args[2];
+        int amount = 1;
+        if (args.length > 3) {
+            Integer parsed = parseAmount(args[3], sender);
+            if (parsed == null) return true;
+            amount = parsed;
+        }
+
+        Player target;
+        if (args.length > 4) {
+            target = Bukkit.getPlayer(args[4]);
+            if (target == null || !target.isOnline()) {
+                sender.sendMessage("§cPemain '" + args[4] + "' tidak ditemukan atau sedang offline!");
+                return true;
+            }
+        } else {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cConsole harus menyertakan [player] tujuan!");
+                return true;
+            }
+            target = (Player) sender;
+        }
+
+        switch (giveType) {
+            case FISH:
+                return plugin.getGiveManager().giveFish(sender, target, id, amount);
+            case BAIT:
+                return plugin.getGiveManager().giveBait(sender, target, id, amount);
+            case ROD:
+                return plugin.getGiveManager().giveRod(sender, target, id, amount);
+        }
         return true;
     }
-    
-    /**
-     * Give a player a custom bait
-     * @param player The player to give the bait to
-     * @param baitId The ID of the bait in the configuration
-     * @param amount The amount of baits to give
-     * @return true if successful
-     */
-    private boolean giveBait(Player player, String baitId, int amount) {
-        FishingBait bait = plugin.getConfigManager().getFishingBaits().get(baitId);
-        if (bait == null) {
-            player.sendMessage("§cUmpan dengan ID '" + baitId + "' tidak ditemukan!");
-            return false;
+
+    private boolean handleViewCommand(CommandSender sender, String[] args) {
+        // Syntax: /nf view <fish|bait|rod> [id]
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("§cPerintah katalog view hanya dapat dibuka oleh pemain!");
+            return true;
         }
-        
-        // Create the bait item and give to player
-        ItemStack baitItem = bait.createItemStack(amount);
-        player.getInventory().addItem(baitItem);
-        
-        player.sendMessage("§aKamu mendapatkan §f" + amount + "x §a" + bait.getName() + "§a!");
+
+        if (!sender.hasPermission("nusafishing.view") && !sender.hasPermission("nusafishing.admin")) {
+            sender.sendMessage("§cKamu tidak memiliki izin untuk melihat katalog!");
+            return true;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage("§cPenggunaan: /nusafishing view <fish|bait|rod> [id]");
+            return true;
+        }
+
+        GiveType viewType = GiveType.fromString(args[1]);
+        if (viewType == null) {
+            sender.sendMessage("§cTipe tidak valid! Gunakan: fish, bait, atau rod.");
+            return true;
+        }
+
+        String filterId = args.length > 2 ? args[2] : null;
+        new ViewCatalogGUI((Player) sender, plugin, viewType, filterId).open();
         return true;
+    }
+
+    private boolean handleFishbookCommand(CommandSender sender, String[] args) {
+        // Syntax: /nf fishbook
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("§cBuku ikan hanya dapat dibuka oleh pemain!");
+            return true;
+        }
+
+        if (!sender.hasPermission("nusafishing.fishbook") && !sender.hasPermission("nusafishing.admin")) {
+            sender.sendMessage("§cKamu tidak memiliki izin untuk membuka buku ikan!");
+            return true;
+        }
+
+        new FishbookGUI((Player) sender, plugin).open();
+        return true;
+    }
+
+    private boolean handleRodCommand(CommandSender sender, String[] args) {
+        // Legacy alias /nf rod [id] [amount] [player] -> give rod
+        if (!hasGivePermission(sender, GiveType.ROD)) {
+            sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+            return true;
+        }
+
+        if (args.length == 1) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cPenggunaan: /nusafishing rod <id> [amount] [player]");
+                return true;
+            }
+            new GiveCatalogGUI((Player) sender, plugin, GiveType.ROD).open();
+            return true;
+        }
+
+        String rodId = args[1];
+        int amount = 1;
+        if (args.length > 2) {
+            Integer parsed = parseAmount(args[2], sender);
+            if (parsed == null) return true;
+            amount = parsed;
+        }
+
+        Player target;
+        if (args.length > 3) {
+            target = Bukkit.getPlayer(args[3]);
+            if (target == null || !target.isOnline()) {
+                sender.sendMessage("§cPemain '" + args[3] + "' tidak ditemukan atau sedang offline!");
+                return true;
+            }
+        } else {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cConsole harus menyertakan [player] tujuan!");
+                return true;
+            }
+            target = (Player) sender;
+        }
+
+        return plugin.getGiveManager().giveRod(sender, target, rodId, amount);
+    }
+
+    private boolean handleBaitCommand(CommandSender sender, String[] args) {
+        // Legacy alias /nf bait [id] [amount] [player] -> give bait
+        if (!hasGivePermission(sender, GiveType.BAIT)) {
+            sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+            return true;
+        }
+
+        if (args.length == 1) {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cPenggunaan: /nusafishing bait <id> [amount] [player]");
+                return true;
+            }
+            new GiveCatalogGUI((Player) sender, plugin, GiveType.BAIT).open();
+            return true;
+        }
+
+        String baitId = args[1];
+        int amount = 1;
+        if (args.length > 2) {
+            Integer parsed = parseAmount(args[2], sender);
+            if (parsed == null) return true;
+            amount = parsed;
+        }
+
+        Player target;
+        if (args.length > 3) {
+            target = Bukkit.getPlayer(args[3]);
+            if (target == null || !target.isOnline()) {
+                sender.sendMessage("§cPemain '" + args[3] + "' tidak ditemukan atau sedang offline!");
+                return true;
+            }
+        } else {
+            if (!(sender instanceof Player)) {
+                sender.sendMessage("§cConsole harus menyertakan [player] tujuan!");
+                return true;
+            }
+            target = (Player) sender;
+        }
+
+        return plugin.getGiveManager().giveBait(sender, target, baitId, amount);
     }
     
     /**
@@ -869,6 +1016,10 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 ItemStack item = contents[i];
                 if (item == null) continue;
 
+                if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                    continue;
+                }
+
                 CustomFish fish = getFishFromItem(item);
                 if (fish == null) continue;
 
@@ -913,6 +1064,11 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             CustomFish fish = getFishFromItem(handItem);
             if (fish == null) {
                 player.sendMessage("§cItem yang kamu pegang bukan ikan hasil pancingan!");
+                return false;
+            }
+
+            if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(handItem)) {
+                player.sendMessage("§cIkan pemberian admin tidak dapat dijual!");
                 return false;
             }
 
@@ -1025,64 +1181,141 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
-        
-        if (args.length == 1) {
-            // Main subcommands without duplicates
-            Set<String> subCommands = new LinkedHashSet<>(Arrays.asList("help", "rod", "bait", "repair",
-                    "location", "event", "collector", "sell", "shop", "tournament", "afk", "stats"));
 
+        if (args.length == 1) {
+            Set<String> subCommands = new LinkedHashSet<>();
+            subCommands.add("help");
+            if (sender.hasPermission("nusafishing.fishbook")) subCommands.add("fishbook");
+            if (sender.hasPermission("nusafishing.view")) subCommands.add("view");
+            if (hasGivePermission(sender, GiveType.FISH) || hasGivePermission(sender, GiveType.BAIT) || hasGivePermission(sender, GiveType.ROD)) {
+                subCommands.add("give");
+            }
+            if (hasGivePermission(sender, GiveType.ROD)) subCommands.add("rod");
+            if (hasGivePermission(sender, GiveType.BAIT)) subCommands.add("bait");
+            if (sender.hasPermission("nusafishing.repair")) subCommands.add("repair");
+            if (sender.hasPermission("nusafishing.shop")) subCommands.add("shop");
+            if (sender.hasPermission("nusafishing.sell")) subCommands.add("sell");
+            if (sender.hasPermission("nusafishing.afk")) subCommands.add("afk");
+            if (sender.hasPermission("nusafishing.collector")) subCommands.add("collector");
+            subCommands.add("tournament");
+            if (sender.hasPermission("nusafishing.stats")) subCommands.add("stats");
+            if (sender.hasPermission("nusafishing.admin.event")) subCommands.add("event");
             if (sender.hasPermission("nusafishing.admin")) {
+                subCommands.add("location");
                 subCommands.add("reload");
             }
 
-            for (String subCommand : subCommands) {
-                if (subCommand.startsWith(args[0].toLowerCase())) {
-                    completions.add(subCommand);
-                }
-            }
+            return filterCompletions(new ArrayList<>(subCommands), args[0]);
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("stats")) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("give")) {
+                List<String> types = new ArrayList<>();
+                if (hasGivePermission(sender, GiveType.FISH)) types.add("fish");
+                if (hasGivePermission(sender, GiveType.BAIT)) types.add("bait");
+                if (hasGivePermission(sender, GiveType.ROD)) types.add("rod");
+                return filterCompletions(types, args[1]);
+            } else if (sub.equals("view") && (sender.hasPermission("nusafishing.view") || sender.hasPermission("nusafishing.admin"))) {
+                return filterCompletions(Arrays.asList("fish", "bait", "rod"), args[1]);
+            } else if (sub.equals("rod") && hasGivePermission(sender, GiveType.ROD)) {
+                return filterCompletions(new ArrayList<>(plugin.getConfigManager().getFishingRods().keySet()), args[1]);
+            } else if (sub.equals("bait") && hasGivePermission(sender, GiveType.BAIT)) {
+                return filterCompletions(new ArrayList<>(plugin.getConfigManager().getFishingBaits().keySet()), args[1]);
+            } else if (sub.equals("stats") && sender.hasPermission("nusafishing.stats")) {
                 return Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName)
                         .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
-            } else if (args[0].equalsIgnoreCase("sell") && sender.hasPermission("nusafishing.sell")) {
-                completions.add("all");
-            } else if (args[0].equalsIgnoreCase("rod") && sender.hasPermission("nusafishing.rod")) {
-                // Rod tab completion logic (existing code)
-            } else if (args[0].equalsIgnoreCase("event")) {
-                return Arrays.asList("start", "stop", "info").stream()
-                       .filter(s -> s.startsWith(args[1].toLowerCase()))
-                       .collect(Collectors.toList());
-            } else if (args[0].equalsIgnoreCase("tournament")) {
-                List<String> options = new ArrayList<>();
-                options.add("join");
-                options.add("info");
-                options.add("leaderboard");
-                options.add("schedule");
-                
+            } else if (sub.equals("sell") && sender.hasPermission("nusafishing.sell")) {
+                return filterCompletions(Collections.singletonList("all"), args[1]);
+            } else if (sub.equals("event") && sender.hasPermission("nusafishing.admin.event")) {
+                return filterCompletions(Arrays.asList("start", "stop", "info"), args[1]);
+            } else if (sub.equals("location") && sender.hasPermission("nusafishing.admin")) {
+                return filterCompletions(Arrays.asList("list", "tp", "create", "delete"), args[1]);
+            } else if (sub.equals("tournament")) {
+                List<String> options = new ArrayList<>(Arrays.asList("join", "info", "leaderboard", "schedule"));
                 if (sender.hasPermission("nusafishing.admin.tournament")) {
                     options.add("start");
                     options.add("end");
                 }
-                
                 return filterCompletions(options, args[1]);
             }
-            // Rest of the tab completion logic
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("event") && args[1].equalsIgnoreCase("start")) {
-            return Arrays.stream(EventType.values())
-                   .map(Enum::name)
-                   .filter(s -> s.startsWith(args[2].toUpperCase()))
-                   .collect(Collectors.toList());
-        } else if (args.length == 3 && args[0].equalsIgnoreCase("tournament") && 
-                args[1].equalsIgnoreCase("start") && 
-                sender.hasPermission("nusafishing.admin.tournament")) {
-            return filterCompletions(
-                    new ArrayList<>(plugin.getTournamentManager().getScheduledTournaments().keySet()),
-                    args[2]);
+        } else if (args.length == 3) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("give")) {
+                GiveType type = GiveType.fromString(args[1]);
+                if (type != null && hasGivePermission(sender, type)) {
+                    return filterCompletions(getItemIdsForType(type), args[2]);
+                }
+            } else if (sub.equals("view") && (sender.hasPermission("nusafishing.view") || sender.hasPermission("nusafishing.admin"))) {
+                GiveType type = GiveType.fromString(args[1]);
+                if (type != null) {
+                    return filterCompletions(getItemIdsForType(type), args[2]);
+                }
+            } else if (sub.equals("rod") && hasGivePermission(sender, GiveType.ROD)) {
+                return filterCompletions(Arrays.asList("1", "16", "32", "64"), args[2]);
+            } else if (sub.equals("bait") && hasGivePermission(sender, GiveType.BAIT)) {
+                return filterCompletions(Arrays.asList("1", "16", "32", "64"), args[2]);
+            } else if (sub.equals("event") && args[1].equalsIgnoreCase("start") && sender.hasPermission("nusafishing.admin.event")) {
+                return Arrays.stream(EventType.values())
+                        .map(Enum::name)
+                        .filter(s -> s.startsWith(args[2].toUpperCase()))
+                        .collect(Collectors.toList());
+            } else if (sub.equals("tournament") && args[1].equalsIgnoreCase("start") && sender.hasPermission("nusafishing.admin.tournament")) {
+                return filterCompletions(
+                        new ArrayList<>(plugin.getTournamentManager().getScheduledTournaments().keySet()),
+                        args[2]);
+            } else if (sub.equals("location") && (args[1].equalsIgnoreCase("tp") || args[1].equalsIgnoreCase("delete")) && sender.hasPermission("nusafishing.admin")) {
+                ConfigurationSection locSec = plugin.getConfigManager().getFishingConfig().getConfigurationSection("special_locations");
+                if (locSec != null) {
+                    return filterCompletions(new ArrayList<>(locSec.getKeys(false)), args[2]);
+                }
+            }
+        } else if (args.length == 4) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("give")) {
+                GiveType type = GiveType.fromString(args[1]);
+                if (type != null && hasGivePermission(sender, type)) {
+                    return filterCompletions(Arrays.asList("1", "16", "32", "64"), args[3]);
+                }
+            } else if ((sub.equals("rod") && hasGivePermission(sender, GiveType.ROD)) || (sub.equals("bait") && hasGivePermission(sender, GiveType.BAIT))) {
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[3].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+        } else if (args.length == 5) {
+            String sub = args[0].toLowerCase();
+            if (sub.equals("give")) {
+                GiveType type = GiveType.fromString(args[1]);
+                if (type != null && hasGivePermission(sender, type)) {
+                    return Bukkit.getOnlinePlayers().stream()
+                            .map(Player::getName)
+                            .filter(name -> name.toLowerCase().startsWith(args[4].toLowerCase()))
+                            .collect(Collectors.toList());
+                }
+            }
         }
-        
+
         return completions;
+    }
+
+    private List<String> getItemIdsForType(GiveType type) {
+        List<String> list = new ArrayList<>();
+        switch (type) {
+            case FISH:
+                list.addAll(plugin.getConfigManager().getCustomFishes().keySet());
+                for (String evId : ConfigEventFish.getEventFishMap().keySet()) {
+                    if (!list.contains(evId)) list.add(evId);
+                }
+                break;
+            case BAIT:
+                list.addAll(plugin.getConfigManager().getFishingBaits().keySet());
+                break;
+            case ROD:
+                list.addAll(plugin.getConfigManager().getFishingRods().keySet());
+                break;
+        }
+        return list;
     }
     
     /**

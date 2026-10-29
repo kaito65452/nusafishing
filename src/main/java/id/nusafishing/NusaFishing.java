@@ -20,6 +20,7 @@ import id.nusafishing.placeholder.NusaFishingPlaceholders;
 import id.nusafishing.fishing.data.FishingStatisticsManager;
 import id.nusafishing.tournament.TournamentManager;
 import id.nusafishing.managers.RewardsManager;
+import id.nusafishing.managers.GiveManager;
 import id.nusafishing.integration.item.ItemProviderManager;
 import id.nusafishing.integration.auraskills.AuraSkillsHook;
 import id.nusafishing.fishing.afk.AfkFishingManager;
@@ -41,6 +42,7 @@ public class NusaFishing extends JavaPlugin {
     private FishingStatisticsManager statisticsManager;
     private TournamentManager tournamentManager;
     private RewardsManager rewardsManager;
+    private GiveManager giveManager;
     private FishingListener fishingListener;
     
     private BukkitTask priceUpdateTask;
@@ -83,7 +85,10 @@ public class NusaFishing extends JavaPlugin {
         
         // Initialize rewards manager
         this.rewardsManager = new RewardsManager(this);
-        
+
+        // Initialize give manager
+        this.giveManager = new GiveManager(this);
+
         // Initialize AuraSkills integration
         this.auraSkillsHook = new AuraSkillsHook(this);
 
@@ -157,7 +162,10 @@ public class NusaFishing extends JavaPlugin {
         if (afkFishingManager != null) {
             afkFishingManager.cleanup();
         }
-        
+
+        // Close all open GUIs and clean leaked GUI items
+        id.nusafishing.gui.GUI.closeAll();
+
         LOGGER.info("NusaFishing disabled");
     }
     
@@ -205,6 +213,10 @@ public class NusaFishing extends JavaPlugin {
     
     public RewardsManager getRewardsManager() {
         return rewardsManager;
+    }
+
+    public GiveManager getGiveManager() {
+        return giveManager;
     }
 
     public AuraSkillsHook getAuraSkillsHook() {

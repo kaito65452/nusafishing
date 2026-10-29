@@ -4,7 +4,7 @@
 
 ![Java](https://img.shields.io/badge/Java-21%20%7C%2025%20(MR--JAR)-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Paper](https://img.shields.io/badge/Platform-Paper%20%2F%20Purpur%201.21.x+-1E88E5?style=for-the-badge&logo=minecraft&logoColor=white)
-![Release](https://img.shields.io/badge/Release-v1.3%2BSNAPSHOT-00C853?style=for-the-badge)
+![Release](https://img.shields.io/badge/Release-v1.5%2BSNAPSHOT-00C853?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-GNU%20GPL%20v2-blue?style=for-the-badge)
 
 **An enterprise-grade, RPG-styled fishing system engineered for modern Spigot, Paper, and Purpur Minecraft servers.**
@@ -329,7 +329,7 @@ cd nusafishing
 
 The compiled multi-release artifact will be generated in:
 ```
-build/libs/nusafishing-1.3+SNAPSHOT+<commit>.jar
+build/libs/nusafishing-1.5+SNAPSHOT+<commit>.jar
 ```
 
 ### Verifying Multi-Release Bytecode

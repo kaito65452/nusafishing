@@ -17,20 +17,32 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 25
+      - name: Set up JDK 25 and 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '25'
+          java-version: |
+            25
+            21
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 'current'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Verify Multi-Release JAR Bytecode
+        run: |
+          JAR_FILE=$(ls build/libs/nusafishing-*.jar | head -n 1)
+          echo "Inspecting $JAR_FILE"
+          javap -verbose -cp "$JAR_FILE" id.nusafishing.NusaFishing | grep "major version: 65"
+          unzip -p "$JAR_FILE" META-INF/versions/25/id/nusafishing/compat/PlatformHelper.class > /tmp/PlatformHelper25.class
+          javap -verbose /tmp/PlatformHelper25.class | grep "major version: 69"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2

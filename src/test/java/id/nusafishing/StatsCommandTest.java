@@ -81,6 +81,7 @@ public class StatsCommandTest {
     @Test
     public void testTabCompleteMainCommandContainsStats() {
         PlayerMock player = server.addPlayer("Steve");
+        player.addAttachment(plugin, "nusafishing.stats", true);
 
         // Tab completion dengan input kosong: /nf ""
         List<String> completions = commandExecutor.onTabComplete(player, null, "nf", new String[]{""});
@@ -99,6 +100,7 @@ public class StatsCommandTest {
     @Test
     public void testTabCompleteStatsReturnsOnlinePlayers() {
         PlayerMock sender = server.addPlayer("Charlie");
+        sender.addAttachment(plugin, "nusafishing.stats", true);
         PlayerMock player1 = server.addPlayer("Alice");
         PlayerMock player2 = server.addPlayer("Bob");
 

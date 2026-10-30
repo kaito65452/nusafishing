@@ -1,4 +1,5 @@
 # NusaFishing Main Configuration
+config_schema: 2
 config_version: "1.5"
 
 # Give command settings (/nf give)
@@ -14,6 +15,15 @@ give:
 fishbook:
   # Menampilkan ikan event dalam fishbook
   include-event-fish: true
+
+# Collector settings (/nf collector)
+collector:
+  # Batas maksimal ikan event yang dapat dijual per hari per pemain (0 = tanpa batas)
+  daily-sell-limit: 0
+  # Persentase pajak penjualan kolektor mistik (0 = tanpa pajak)
+  sale-tax-percent: 0.0
+  # Batas atas streak penjualan berturut-turut untuk bonus kolektor
+  max-streak: 10
 
 # AuraSkills Integration
 # Wiki: https://wiki.aurelium.dev/auraskills/api
@@ -225,3 +235,74 @@ event_fish:
     base_price: 135000.0
     tier: LEGENDARY
     event_types: [RIVER_TITAN]
+
+# ==============================================================================
+# Fishing Tournaments
+# ------------------------------------------------------------------------------
+# Sustainable prize pools scaled to prevent coin inflation:
+# - Daily:  1st 3,500 coins | 2nd 1,500 coins | 3rd 750 coins
+# - Weekly: 1st 15,000 coins | 2nd 7,500 coins | 3rd 3,500 coins
+# ==============================================================================
+tournaments:
+  min_time_between_tournaments: 60
+  auto_schedule: true
+  scheduled:
+    daily_heaviest:
+      name: "Turnamen Ikan Terberat Harian"
+      description: "Tangkap ikan dengan bobot terberat untuk merebut piala juara!"
+      type: HEAVIEST_FISH
+      duration_minutes: 30
+      hour_of_day: 18
+      minute_of_hour: 0
+      days_of_week:
+        - MONDAY
+        - TUESDAY
+        - WEDNESDAY
+        - THURSDAY
+        - FRIDAY
+        - SATURDAY
+        - SUNDAY
+      auto_start: true
+      rewards:
+        first_place:
+          money: 3500
+          exp: 300
+          commands:
+            - "give %player% diamond 3"
+        second_place:
+          money: 1500
+          exp: 150
+          commands:
+            - "give %player% diamond 1"
+        third_place:
+          money: 750
+          exp: 75
+          commands: []
+
+    weekly_most_fish:
+      name: "Turnamen Nelayan Handal Mingguan"
+      description: "Tangkap ikan sebanyak mungkin selama 1 jam penuh!"
+      type: MOST_FISH
+      duration_minutes: 60
+      hour_of_day: 20
+      minute_of_hour: 0
+      days_of_week:
+        - SATURDAY
+      auto_start: true
+      rewards:
+        first_place:
+          money: 15000
+          exp: 1000
+          commands:
+            - "give %player% netherite_ingot 1"
+            - "give %player% diamond 10"
+        second_place:
+          money: 7500
+          exp: 500
+          commands:
+            - "give %player% diamond 5"
+        third_place:
+          money: 3500
+          exp: 250
+          commands:
+            - "give %player% diamond 2"

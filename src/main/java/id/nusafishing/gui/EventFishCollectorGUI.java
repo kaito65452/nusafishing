@@ -36,6 +36,8 @@ public class EventFishCollectorGUI extends GUI {
     // Bonus rewards tracking
     private static final Map<UUID, Long> lastEventFishSale = new HashMap<>();
     private static final Map<UUID, Integer> consecutiveSales = new HashMap<>();
+    private static final Map<UUID, Integer> dailySalesCount = new HashMap<>();
+    private static final Map<UUID, Long> dailySalesDay = new HashMap<>();
     
     // Constants for the GUI
     private static final String GUI_TITLE = "§d§l✦ Kolektor Ikan Mistik ✦";
@@ -126,7 +128,7 @@ public class EventFishCollectorGUI extends GUI {
                 .lore("§7mendapatkan harga premium dan")
                 .lore("§7bonus istimewa!")
                 .lore("")
-                .lore("§d✦ §fHarga 3x lipat dari normal")
+                .lore("§d✦ §fHarga 1.5x lipat dari normal")
                 .lore("§d✦ §fKesempatan mendapat bonus")
                 .build(), () -> sellAllEventFish());
         
@@ -143,20 +145,60 @@ public class EventFishCollectorGUI extends GUI {
     private void updatePlayerInfo() {
         // Get player streak
         int streak = consecutiveSales.getOrDefault(player.getUniqueId(), 0);
-        
+        int maxStreak = plugin.getConfigManager().getCollectorMaxStreak();
+
         // Get balance
         String balanceText = economy.formatMoney(economy.getBalance(player));
-        
+
+        // Daily sell limit calculation
+        int dailyLimit = plugin.getConfigManager().getCollectorDailySellLimit();
+        int soldToday = getDailySoldToday(player.getUniqueId());
+        String quotaText;
+        if (dailyLimit <= 0) {
+            quotaText = "§aTanpa batas";
+        } else {
+            int remainingQuota = Math.max(0, dailyLimit - soldToday);
+            quotaText = "§e" + remainingQuota + " §7/ §f" + dailyLimit;
+        }
+
+        double taxPercent = plugin.getConfigManager().getCollectorSaleTaxPercent();
+
         // Create info item
-        ItemStack infoItem = new ItemBuilder(Material.BOOK)
+        ItemBuilder builder = new ItemBuilder(Material.BOOK)
                 .name("§e§l" + player.getName())
                 .lore("§7Saldo: §f" + balanceText)
-                .lore("§7Streak Penjualan: §f" + streak)
-                .lore("")
-                .lore("§d✦ §fStreak meningkatkan bonus yang kamu dapatkan!")
-                .build();
-        
-        setItem(8, infoItem);
+                .lore("§7Streak Penjualan: §f" + streak + " §7(Maks: " + maxStreak + ")")
+                .lore("§7Sisa Kuota Harian: " + quotaText);
+
+        if (taxPercent > 0.0) {
+            builder.lore("§7Pajak Penjualan: §c" + String.format(java.util.Locale.US, "%.1f%%", taxPercent));
+        }
+
+        builder.lore("")
+                .lore("§d✦ §fStreak meningkatkan bonus yang kamu dapatkan!");
+
+        setItem(8, builder.build());
+    }
+
+    private static long getCurrentEpochDay() {
+        return System.currentTimeMillis() / 86400000L;
+    }
+
+    public static int getDailySoldToday(UUID playerId) {
+        long today = getCurrentEpochDay();
+        Long lastDay = dailySalesDay.get(playerId);
+        if (lastDay == null || lastDay != today) {
+            return 0;
+        }
+        return dailySalesCount.getOrDefault(playerId, 0);
+    }
+
+    private static void recordDailySold(UUID playerId, int amount) {
+        long today = getCurrentEpochDay();
+        Long lastDay = dailySalesDay.get(playerId);
+        int current = (lastDay != null && lastDay == today) ? dailySalesCount.getOrDefault(playerId, 0) : 0;
+        dailySalesDay.put(playerId, today);
+        dailySalesCount.put(playerId, current + amount);
     }
     
     /**
@@ -247,23 +289,39 @@ public class EventFishCollectorGUI extends GUI {
      * @param item The item to check
      * @return true if the item is an event fish
      */
-    private boolean isEventFish(ItemStack item) {
+    public static boolean isEventFish(ItemStack item) {
         if (item == null) return false;
-        
+
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return false;
-        
+
         PersistentDataContainer container = meta.getPersistentDataContainer();
         NamespacedKey cleanFishIdKey = NamespacedKey.fromString("nusafishing:fish_id");
-        NamespacedKey legacyFishIdKey = new NamespacedKey(plugin, "fish_id");
-        
+        NamespacedKey legacyFishIdKey = NamespacedKey.fromString("nusafishing:fish_id");
+
         String fishId = null;
         if (cleanFishIdKey != null && container.has(cleanFishIdKey, PersistentDataType.STRING)) {
             fishId = container.get(cleanFishIdKey, PersistentDataType.STRING);
-        } else if (container.has(legacyFishIdKey, PersistentDataType.STRING)) {
-            fishId = container.get(legacyFishIdKey, PersistentDataType.STRING);
         }
-        return fishId != null && fishId.startsWith("event_");
+        if (fishId == null) {
+            for (NamespacedKey key : container.getKeys()) {
+                if (key.getKey().equals("fish_id")) {
+                    fishId = container.get(key, PersistentDataType.STRING);
+                    break;
+                }
+            }
+        }
+        return isEventFishId(fishId);
+    }
+
+    public static boolean isEventFishId(String fishId) {
+        if (fishId == null) return false;
+        if (fishId.startsWith("event_")) return true;
+        if (ConfigEventFish.getEventFish(fishId) != null) return true;
+        for (EventFish ef : EventFish.values()) {
+            if (ef.name().equalsIgnoreCase(fishId)) return true;
+        }
+        return false;
     }
     
     /**
@@ -398,31 +456,53 @@ public class EventFishCollectorGUI extends GUI {
         }
 
         int amount = currentItem.getAmount();
-        double totalPrice = unitPrice * amount;
+        int dailyLimit = plugin.getConfigManager().getCollectorDailySellLimit();
+        if (dailyLimit > 0) {
+            int soldToday = getDailySoldToday(player.getUniqueId());
+            if (soldToday + amount > dailyLimit) {
+                int remaining = Math.max(0, dailyLimit - soldToday);
+                player.sendMessage("§c§l[KOLEKTOR MISTIK] §fMelebihi batas kuota harian! Sisa kuota hari ini: §e" + remaining + " ikan§f.");
+                setupGui();
+                return;
+            }
+        }
+
+        double grossPrice = unitPrice * amount;
+        double taxPercent = plugin.getConfigManager().getCollectorSaleTaxPercent();
+        double taxAmount = (taxPercent > 0.0) ? (grossPrice * (taxPercent / 100.0)) : 0.0;
+        double netPrice = grossPrice - taxAmount;
 
         // Verify transaction before removing items to prevent loss
-        if (!economy.depositMoney(player, totalPrice)) {
+        if (!economy.depositMoney(player, netPrice)) {
             player.sendMessage("§c§l[KOLEKTOR MISTIK] §fTransaksi ekonomi gagal! Ikan tidak dijual.");
             setupGui();
             return;
         }
+
+        // Record daily sold count
+        recordDailySold(player.getUniqueId(), amount);
 
         // Remove the fish from the player's inventory
         player.getInventory().setItem(inventorySlot, null);
 
         // Play collection animation
         playCollectionAnimation();
-        
+
         // Increment the player's streak
         incrementStreak(player.getUniqueId());
-        
+
         // Notify the player
-        player.sendMessage("§d§l[KOLEKTOR MISTIK] §fKamu menjual §b" + amount + "x " + fish.getName() + 
-                " §fdengan harga premium §e" + economy.formatMoney(totalPrice) + "§f!");
-        
+        if (taxAmount > 0.0) {
+            player.sendMessage("§d§l[KOLEKTOR MISTIK] §fKamu menjual §b" + amount + "x " + fish.getName() +
+                    " §fseharga §e" + economy.formatMoney(netPrice) + " §7(Pajak: " + economy.formatMoney(taxAmount) + ")§f!");
+        } else {
+            player.sendMessage("§d§l[KOLEKTOR MISTIK] §fKamu menjual §b" + amount + "x " + fish.getName() +
+                    " §fdengan harga premium §e" + economy.formatMoney(netPrice) + "§f!");
+        }
+
         // Check for bonus rewards based on streak
         if (random.nextDouble() < getRewardChance(player.getUniqueId())) {
-            giveRandomBonus();
+            giveRandomBonus(netPrice);
         }
         
         // Refresh the GUI immediately
@@ -463,23 +543,45 @@ public class EventFishCollectorGUI extends GUI {
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1.0f, 0.5f);
             return;
         }
-        
+
+        int dailyLimit = plugin.getConfigManager().getCollectorDailySellLimit();
+        int soldToday = getDailySoldToday(player.getUniqueId());
+        int remainingQuota = (dailyLimit > 0) ? Math.max(0, dailyLimit - soldToday) : Integer.MAX_VALUE;
+
+        if (dailyLimit > 0 && remainingQuota <= 0) {
+            player.sendMessage("§c§l[KOLEKTOR MISTIK] §fBatas kuota penjualan harian kamu sudah habis!");
+            setupGui();
+            return;
+        }
+
         // Calculate total first without deleting items
-        double totalEarnings = 0;
+        double grossEarnings = 0;
         int totalFishSold = 0;
         List<Integer> validSoldSlots = new ArrayList<>();
+        Map<Integer, Integer> slotPartialAmounts = new HashMap<>();
 
-        // Process each event fish calculation
+        // Process each event fish calculation (capped by daily limit)
         for (int slot : eventFishSlots) {
+            if (dailyLimit > 0 && totalFishSold >= remainingQuota) {
+                break;
+            }
             ItemStack fishItem = player.getInventory().getItem(slot);
             if (fishItem != null && isEventFish(fishItem)) {
                 CustomFish fish = getFishFromItem(fishItem);
                 if (fish != null) {
+                    int availableAmount = fishItem.getAmount();
+                    int canSell = availableAmount;
+                    if (dailyLimit > 0 && totalFishSold + availableAmount > remainingQuota) {
+                        canSell = remainingQuota - totalFishSold;
+                    }
+                    if (canSell <= 0) break;
+
                     double basePrice = fish.getPrice();
                     double premiumPrice = basePrice * EVENT_FISH_PRICE_MULTIPLIER;
-                    totalEarnings += premiumPrice * fishItem.getAmount();
-                    totalFishSold += fishItem.getAmount();
+                    grossEarnings += premiumPrice * canSell;
+                    totalFishSold += canSell;
                     validSoldSlots.add(slot);
+                    slotPartialAmounts.put(slot, canSell);
                 }
             }
         }
@@ -489,39 +591,59 @@ public class EventFishCollectorGUI extends GUI {
             return;
         }
 
+        double taxPercent = plugin.getConfigManager().getCollectorSaleTaxPercent();
+        double taxAmount = (taxPercent > 0.0) ? (grossEarnings * (taxPercent / 100.0)) : 0.0;
+        double netEarnings = grossEarnings - taxAmount;
+
         // Deposit money before removing items
-        if (!economy.depositMoney(player, totalEarnings)) {
+        if (!economy.depositMoney(player, netEarnings)) {
             player.sendMessage("§c§l[KOLEKTOR MISTIK] §fTransaksi ekonomi gagal! Ikan tidak dijual.");
             setupGui();
             return;
         }
 
-        // Remove the fish only after successful deposit
+        // Record daily sold count
+        recordDailySold(player.getUniqueId(), totalFishSold);
+
+        // Remove or decrease the fish only after successful deposit
         for (int slot : validSoldSlots) {
-            player.getInventory().setItem(slot, null);
+            int toRemove = slotPartialAmounts.getOrDefault(slot, 0);
+            ItemStack item = player.getInventory().getItem(slot);
+            if (item != null) {
+                if (item.getAmount() <= toRemove) {
+                    player.getInventory().setItem(slot, null);
+                } else {
+                    item.setAmount(item.getAmount() - toRemove);
+                }
+            }
         }
-        
+
         // Increment the player's streak
         incrementStreak(player.getUniqueId());
-        
+
         // Play collection animation (more dramatic for bulk sale)
         playBulkCollectionAnimation();
-        
+
         // Create a summary message
         StringBuilder summary = new StringBuilder();
         summary.append("§d§l[KOLEKTOR MISTIK] §fDaftar Ikan Terjual:\n");
-        
+
         for (Map.Entry<String, Integer> entry : fishCounts.entrySet()) {
             summary.append("§e• §b").append(entry.getKey()).append(" §fx").append(entry.getValue()).append("\n");
         }
-        
-        summary.append("\n§fTotal pendapatan: §e").append(economy.formatMoney(totalEarnings)).append("§f!");
-        
+
+        if (taxAmount > 0.0) {
+            summary.append("\n§fTotal pendapatan bersih: §e").append(economy.formatMoney(netEarnings))
+                   .append(" §7(Pajak: ").append(economy.formatMoney(taxAmount)).append(")§f!");
+        } else {
+            summary.append("\n§fTotal pendapatan: §e").append(economy.formatMoney(netEarnings)).append("§f!");
+        }
+
         // Show to player
         player.sendMessage(summary.toString());
-        
+
         // Always give a bonus when selling all
-        giveRandomBonus();
+        giveRandomBonus(netEarnings);
         
         // Refresh the GUI immediately
         setupGui();
@@ -583,17 +705,18 @@ public class EventFishCollectorGUI extends GUI {
     private void incrementStreak(UUID playerId) {
         long currentTime = System.currentTimeMillis();
         long lastSale = lastEventFishSale.getOrDefault(playerId, 0L);
-        
+        int maxStreak = plugin.getConfigManager().getCollectorMaxStreak();
+
         // Check if this is within streak time (24 hours)
         if (currentTime - lastSale < 24 * 60 * 60 * 1000 || lastSale == 0) {
-            // Increment streak
+            // Increment streak capped at max-streak
             int currentStreak = consecutiveSales.getOrDefault(playerId, 0);
-            consecutiveSales.put(playerId, currentStreak + 1);
+            consecutiveSales.put(playerId, Math.min(maxStreak, currentStreak + 1));
         } else {
             // Reset streak
             consecutiveSales.put(playerId, 1);
         }
-        
+
         // Update last sale time
         lastEventFishSale.put(playerId, currentTime);
     }
@@ -612,31 +735,30 @@ public class EventFishCollectorGUI extends GUI {
     
     /**
      * Give a random bonus to the player
+     * @param transactionTotal Total transaction earnings from the sale
      */
-    private void giveRandomBonus() {
+    private void giveRandomBonus(double transactionTotal) {
         // Choose a random bonus type
         BonusReward bonusType = BonusReward.fromId(random.nextInt(4));
-        
+
         // Get player streak for bonus calculation
-        int streak = consecutiveSales.getOrDefault(player.getUniqueId(), 1);
-        
+        int maxStreak = plugin.getConfigManager().getCollectorMaxStreak();
+        int streak = Math.min(maxStreak, consecutiveSales.getOrDefault(player.getUniqueId(), 1));
+
         switch (bonusType) {
             case EXP:
                 // Give fishing XP bonus
                 int expBonus = 100 * streak; // 100 base XP per streak level
                 plugin.getSkillManager().addFishingExp(player, expBonus);
-                
+
                 // Notify player
                 player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(expBonus));
                 break;
-                
+
             case MONEY:
-                // Give money bonus as percentage of their balance (capped for economic safety)
-                int cappedStreak = Math.min(streak, 10);
-                int percentBonus = 5 + (cappedStreak * 2); // 5% + 2% per streak
-                double balance = economy.getBalance(player);
-                double calculatedBonus = balance * (percentBonus / 100.0);
-                double bonus = Math.min(calculatedBonus, 25000.0);
+                // Give money bonus as percentage of transaction total (reverted from player balance regression)
+                int percentBonus = 5 + (streak * 2); // 5% + 2% per streak
+                double bonus = Math.max(10.0, transactionTotal * (percentBonus / 100.0));
 
                 // Add the bonus money
                 economy.depositMoney(player, bonus);
@@ -645,24 +767,28 @@ public class EventFishCollectorGUI extends GUI {
                 player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(percentBonus) +
                                    " §7(" + economy.formatMoney(bonus) + ")");
                 break;
-                
+
             case BAIT:
                 // Give premium bait based on streak level
                 int baitAmount = Math.min(3, streak);
-                
+
                 // Get bait from configuration
                 FishingBait bait = plugin.getConfigManager().getFishingBaits().get("rare_bait");
                 if (bait != null) {
-                    // Run command to give bait
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), 
-                            "nusafishing bait rare_bait " + player.getName() + " " + baitAmount);
-                    
+                    ItemStack baitItem = bait.createItemStack(baitAmount);
+                    HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(baitItem);
+                    if (!leftover.isEmpty()) {
+                        for (ItemStack item : leftover.values()) {
+                            player.getWorld().dropItemNaturally(player.getLocation(), item);
+                        }
+                    }
+
                     // Notify player
-                    player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0) + 
+                    player.sendMessage("§d§l[BONUS MISTIK] §f" + bonusType.getFormatted(0) +
                                        " §7(" + baitAmount + "x)");
                 }
                 break;
-                
+
             case ROD_REPAIR:
                 ItemStack mainHand = player.getInventory().getItemInMainHand();
                 ItemStack offHand = player.getInventory().getItemInOffHand();

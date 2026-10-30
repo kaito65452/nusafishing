@@ -35,4 +35,12 @@ Definisi subagent di `.claude/agents/*.md` (`bug-hunter`, `code-writer`, `debugg
 - `worker-combo` adalah custom model combo dari endpoint **9router**.
 - **Wajib diganti** (misalnya menjadi `haiku`, `sonnet`, `opus`, atau baris `model:` dihapus agar menggunakan default session model) jika menjalankan **Claude Code** resmi / direct Anthropic API, karena model `worker-combo` tidak dikenali oleh Anthropic API standar.
 
+## Navigasi kode (hemat token)
+1. SEBELUM grep/glob, baca graphify-out/GRAPH_REPORT.md (struktur, god nodes, komunitas).
+2. Untuk pertanyaan spesifik: graphify query "<pertanyaan>" --graph graphify-out/graph.json
+   (bukan membaca ulang banyak file).
+3. Graph hanya PETA. Sebelum menyimpulkan bug atau mengubah kode, WAJIB baca file
+   dan baris aslinya. Jangan mengutip hubungan dari graph sebagai bukti.
+4. Jika file yang kamu ubah belum di-commit, anggap graph bisa usang untuk file itu.
+5. Jangan menjalankan /graphify (build penuh) sendiri; build dilakukan pemilik.
 

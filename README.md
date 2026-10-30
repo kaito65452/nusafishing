@@ -365,6 +365,20 @@ javap -verbose /tmp/PlatformHelper25.class | grep "major version"
 
 ---
 
+## 🔄 Catatan Upgrade (v1.5)
+
+Pada pembaruan ke versi **1.5**, sistem konfigurasi NusaFishing telah dilengkapi dengan mesin sinkronisasi aman (`ConfigSync`):
+- **Isolasi Versi Skema (`config_schema: 2`)**: Versi skema konfigurasi kini dipisahkan dari hash commit build. File konfigurasi pemain tidak akan ditulis ulang hanya karena hash build berubah.
+- **Perlindungan Nilai Kustom**: Nilai kustom pemain pada `config.yml`, `fishing.yml`, dan `rewards.yml` **tidak akan pernah ditimpa**. Hanya key baru yang belum ada di file server yang akan disalin dari template bawaan.
+- **Sistem Cadangan Otomatis**: Setiap kali sinkronisasi menambahkan key baru, file cadangan dengan format `<file>.bak-<versi>-<timestamp>.yml` otomatis dibuat di folder plugin (maksimal 3 file cadangan terakhir dipertahankan).
+- **Penambahan Bagian Baru pada `config.yml`**:
+  - `give`: Pengaturan `/nf give` (`max-amount`, `admin-fish-sellable`, `drop-if-full`).
+  - `fishbook`: Pengaturan buku koleksi (`include-event-fish`).
+  - `collector`: Pengaturan Kolektor Mistik (`daily-sell-limit`, `sale-tax-percent`, `max-streak`).
+  - `tournaments`: Konfigurasi jadwal turnamen dan prize pool seimbang.
+
+---
+
 ## 📄 License
 
 This project is licensed under the [GNU General Public License v2.0 (GPL-2.0)](LICENSE).

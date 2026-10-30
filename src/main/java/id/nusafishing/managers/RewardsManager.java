@@ -1,6 +1,7 @@
 package id.nusafishing.managers;
 
 import id.nusafishing.NusaFishing;
+import id.nusafishing.config.ConfigSync;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -35,14 +36,9 @@ public class RewardsManager {
         }
         
         rewardsConfig = YamlConfiguration.loadConfiguration(rewardsFile);
-        
-        // Look for defaults in the jar
-        InputStream defConfigStream = plugin.getResource("rewards.yml");
-        if (defConfigStream != null) {
-            YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(
-                    new InputStreamReader(defConfigStream));
-            rewardsConfig.setDefaults(defConfig);
-        }
+
+        // Sinkronisasi key bawaan ke file fisik di disk
+        ConfigSync.sync(plugin, rewardsFile, rewardsConfig, "rewards.yml");
     }
     
     public FileConfiguration getRewardsConfig() {

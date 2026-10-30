@@ -1011,12 +1011,18 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             ItemStack[] contents = player.getInventory().getStorageContents();
             Map<String, Integer> fishSold = new HashMap<>();
             List<Integer> slotsToClear = new ArrayList<>();
+            int skippedEventFishCount = 0;
 
             for (int i = 0; i < contents.length; i++) {
                 ItemStack item = contents[i];
                 if (item == null) continue;
 
                 if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
+                    continue;
+                }
+
+                if (EventFishCollectorGUI.isEventFish(item)) {
+                    skippedEventFishCount += item.getAmount();
                     continue;
                 }
 
@@ -1033,6 +1039,9 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             }
 
             if (totalFishSold == 0) {
+                if (skippedEventFishCount > 0) {
+                    player.sendMessage("§e[!] " + skippedEventFishCount + " ikan event dilewati; jual di /nf collector.");
+                }
                 player.sendMessage("§cTidak ada ikan yang dapat dijual!");
                 return false;
             }
@@ -1052,12 +1061,21 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
                 economy.updateDynamicPrice(entry.getKey(), entry.getValue());
             }
+
+            if (skippedEventFishCount > 0) {
+                player.sendMessage("§e[!] " + skippedEventFishCount + " ikan event dilewati; jual di /nf collector.");
+            }
         } else {
             // Sell only the fish in hand
             ItemStack handItem = player.getInventory().getItemInMainHand();
 
             if (handItem.getType() == Material.AIR) {
                 player.sendMessage("§cKamu tidak memegang ikan!");
+                return false;
+            }
+
+            if (EventFishCollectorGUI.isEventFish(handItem)) {
+                player.sendMessage("§cIkan event hanya bisa dijual di Kolektor Mistik (/nf collector)");
                 return false;
             }
 

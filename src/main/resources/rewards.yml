@@ -1,5 +1,7 @@
 # Rewards for fishing locations
 # These rewards are given when admins create fishing locations
+config_schema: 2
+config_version: "1.5"
 
 # Global settings
 settings:

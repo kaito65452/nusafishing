@@ -267,6 +267,9 @@ public class ShopGUI extends GUI {
         for (int i = 0; i < storage.length; i++) {
             ItemStack item = storage[i];
             if (item != null && isFish(item)) {
+                if (EventFishCollectorGUI.isEventFish(item)) {
+                    continue;
+                }
                 if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
                     continue;
                 }
@@ -517,6 +520,11 @@ public class ShopGUI extends GUI {
             return;
         }
 
+        if (EventFishCollectorGUI.isEventFish(currentItem)) {
+            player.sendMessage("§cIkan event hanya bisa dijual di Kolektor Mistik (/nf collector)");
+            return;
+        }
+
         if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(currentItem)) {
             player.sendMessage("§cIkan pemberian admin tidak dapat dijual!");
             return;
@@ -560,11 +568,17 @@ public class ShopGUI extends GUI {
         List<Integer> slotsToRemove = new ArrayList<>();
         double totalEarnings = 0;
         int totalFishSold = 0;
-        
+        int skippedEventFishCount = 0;
+
         // Process each item in the inventory
         for (int i = 0; i < contents.length; i++) {
             ItemStack item = contents[i];
             if (item == null) continue;
+
+            if (EventFishCollectorGUI.isEventFish(item)) {
+                skippedEventFishCount += item.getAmount();
+                continue;
+            }
 
             if (!plugin.getConfigManager().isAdminFishSellable() && GuiSecurityUtils.isAdminGiven(item)) {
                 continue;
@@ -572,18 +586,21 @@ public class ShopGUI extends GUI {
 
             CustomFish fish = getFishFromItem(item);
             if (fish == null) continue;
-            
+
             double price = economy.calculateFishPrice(fish);
             double earnings = price * item.getAmount();
             totalEarnings += earnings;
             totalFishSold += item.getAmount();
-            
+
             // Keep track of fish types sold for price dynamics
             fishSold.put(fish.getId(), fishSold.getOrDefault(fish.getId(), 0) + item.getAmount());
             slotsToRemove.add(i);
         }
-        
+
         if (totalFishSold == 0) {
+            if (skippedEventFishCount > 0) {
+                player.sendMessage("§e[!] " + skippedEventFishCount + " ikan event dilewati; jual di /nf collector.");
+            }
             player.sendMessage("§cTidak ada ikan yang dapat dijual!");
             return;
         }
@@ -598,16 +615,20 @@ public class ShopGUI extends GUI {
         for (int slot : slotsToRemove) {
             player.getInventory().setItem(slot, null);
         }
-        
+
         // Update dynamic prices for all fish sold
         for (Map.Entry<String, Integer> entry : fishSold.entrySet()) {
             economy.updateDynamicPrice(entry.getKey(), entry.getValue());
         }
-        
+
         // Notify player
-        player.sendMessage("§a§lBerhasil! §fKamu menjual §b" + totalFishSold + " ikan§f dengan total " 
+        player.sendMessage("§a§lBerhasil! §fKamu menjual §b" + totalFishSold + " ikan§f dengan total "
                 + "§a" + economy.formatMoney(totalEarnings) + "§f.");
-        
+
+        if (skippedEventFishCount > 0) {
+            player.sendMessage("§e[!] " + skippedEventFishCount + " ikan event dilewati; jual di /nf collector.");
+        }
+
         // Refresh the inventory
         showFishSellShop(0);
     }

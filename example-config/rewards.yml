@@ -1,0 +1,45 @@
+# Rewards for fishing locations
+# These rewards are given when admins create fishing locations
+config_schema: 2
+config_version: "1.5"
+
+# Global settings
+settings:
+  enable_rewards: true
+
+# Admin rewards - given to the admin who creates the location
+admin_rewards:
+  # Default reward for creating any location
+  default:
+    commands:
+      - "give %player% diamond 1"
+      - "tell %player% Terima kasih telah membuat lokasi memancing baru!"
+    money: 5000
+    exp: 500
+
+  # Rewards based on location size (radius)
+  by_size:
+    small:  # radius < 30
+      commands:
+        - "give %player% emerald 1"
+      money: 2500
+      exp: 250
+    medium:  # 30 <= radius < 80
+      commands:
+        - "give %player% emerald 3"
+      money: 5000
+      exp: 500
+    large:  # radius >= 80
+      commands:
+        - "give %player% emerald 5"
+        - "give %player% diamond_block 1"
+      money: 10000
+      exp: 1000
+
+# Server-wide rewards - announced and potentially available to all players
+server_rewards:
+  enable: true
+  announce_message: "§a§l[LOKASI BARU] §f%admin% telah membuat lokasi memancing baru: §b%location_name%§f di §e%x%§f, §e%z%"
+  teleport_command: "/nf location tp %location_id%"
+  broadcast_commands:
+    - "broadcast Server memiliki lokasi memancing baru! Gunakan /nf location tp %location_id% untuk mengunjunginya!"

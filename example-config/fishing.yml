@@ -1,7 +1,8 @@
 # ==============================================================================
 # NusaFishing - Stable Anti-Inflation Fishing Configuration (fishing.yml)
 # ==============================================================================
-config_version: "1.4"
+config_schema: 2
+config_version: "1.5"
 # MATHEMATICAL PRICING ENGINE EXPLANATION:
 # ------------------------------------------------------------------------------
 # The NusaFishing engine calculates the final sale price of each fish via:

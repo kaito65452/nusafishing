@@ -46,80 +46,20 @@ public class ConfigManager {
     }
     
     public void autoUpdateMainConfig() {
+        File configFile = new File(plugin.getDataFolder(), "config.yml");
         FileConfiguration config = plugin.getConfig();
         if (config == null) return;
-        
-        try {
-            config.options().parseComments(true);
-        } catch (Throwable ignored) {}
 
-        FileConfiguration defaultConfig = null;
-        try (java.io.InputStream defStream = plugin.getResource("config.yml")) {
-            if (defStream != null) {
-                defaultConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defStream, java.nio.charset.StandardCharsets.UTF_8));
-            }
-        } catch (Throwable ignored) {}
-
-        boolean modified = false;
-
-        // Sync missing defaults from bundled config.yml
-        if (defaultConfig != null) {
-            for (String key : defaultConfig.getKeys(true)) {
-                if (!config.contains(key)) {
-                    config.set(key, defaultConfig.get(key));
-                    modified = true;
-                }
-            }
-        }
-
-        String currentVersion = plugin.getDescription().getVersion();
-        String configVersion = config.getString("config_version", null);
-
-        if (configVersion == null || !configVersion.equalsIgnoreCase(currentVersion)) {
-            config.set("config_version", currentVersion);
-            modified = true;
-        }
-
-        if (modified) {
-            plugin.saveConfig();
-            plugin.getLogger().info("[ConfigManager] config.yml berhasil diperbarui secara otomatis ke versi " + currentVersion + "!");
-        }
+        ConfigSync.sync(plugin, configFile, config, "config.yml");
     }
 
     public void autoUpdateFishingConfig() {
         if (fishingConfig == null) return;
-
-        FileConfiguration defaultFishingConfig = null;
-        try (java.io.InputStream defStream = plugin.getResource("fishing.yml")) {
-            if (defStream != null) {
-                defaultFishingConfig = YamlConfiguration.loadConfiguration(new java.io.InputStreamReader(defStream, java.nio.charset.StandardCharsets.UTF_8));
-            }
-        } catch (Throwable ignored) {}
-
-        boolean modified = false;
-
-        // Sync missing keys from bundled fishing.yml
-        if (defaultFishingConfig != null) {
-            for (String key : defaultFishingConfig.getKeys(true)) {
-                if (!fishingConfig.contains(key)) {
-                    fishingConfig.set(key, defaultFishingConfig.get(key));
-                    modified = true;
-                }
-            }
+        if (fishingConfigFile == null) {
+            fishingConfigFile = new File(plugin.getDataFolder(), "fishing.yml");
         }
 
-        String currentVersion = plugin.getDescription().getVersion();
-        String configVersion = fishingConfig.getString("config_version", null);
-
-        if (configVersion == null || !configVersion.equalsIgnoreCase(currentVersion)) {
-            fishingConfig.set("config_version", currentVersion);
-            modified = true;
-        }
-
-        if (modified) {
-            saveConfig();
-            plugin.getLogger().info("[ConfigManager] fishing.yml berhasil diperbarui secara otomatis ke versi " + currentVersion + "!");
-        }
+        ConfigSync.sync(plugin, fishingConfigFile, fishingConfig, "fishing.yml");
     }
     
     private void createFishingConfig() {
@@ -380,5 +320,17 @@ public class ConfigManager {
 
     public boolean isFishbookIncludeEventFish() {
         return plugin.getConfig().getBoolean("fishbook.include-event-fish", true);
+    }
+
+    public int getCollectorDailySellLimit() {
+        return Math.max(0, plugin.getConfig().getInt("collector.daily-sell-limit", 0));
+    }
+
+    public double getCollectorSaleTaxPercent() {
+        return Math.max(0.0, Math.min(100.0, plugin.getConfig().getDouble("collector.sale-tax-percent", 0.0)));
+    }
+
+    public int getCollectorMaxStreak() {
+        return Math.max(1, plugin.getConfig().getInt("collector.max-streak", 10));
     }
 }

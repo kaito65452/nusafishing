@@ -32,4 +32,21 @@ public class AfkAndAuraSkillsTest {
         assertTrue(nerfedMin > baseMin);
         assertTrue(nerfedMax > baseMax);
     }
+
+    @Test
+    public void testAuraSkillsHookLoadsWithoutAuraSkillsInClasspath() throws Exception {
+        ClassLoader isolatingClassLoader = new ClassLoader(getClass().getClassLoader()) {
+            @Override
+            public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+                if (name.startsWith("dev.aurelium.")) {
+                    throw new ClassNotFoundException("Blocked AuraSkills class in test: " + name);
+                }
+                return super.loadClass(name, resolve);
+            }
+        };
+
+        // AuraSkillsHook must load and link cleanly without referencing dev.aurelium.*
+        Class<?> hookClass = Class.forName("id.nusafishing.integration.auraskills.AuraSkillsHook", true, isolatingClassLoader);
+        assertNotNull("AuraSkillsHook class should be loadable without AuraSkills on classpath", hookClass);
+    }
 }

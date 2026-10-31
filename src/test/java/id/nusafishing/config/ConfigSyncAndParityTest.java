@@ -113,6 +113,7 @@ public class ConfigSyncAndParityTest {
     @Test
     public void testCleanVersionExtraction() {
         assertEquals("1.5", ConfigSync.extractCleanVersion("1.5+Alpha+02b8ebb"));
+        assertEquals("1.5", ConfigSync.extractCleanVersion("1.5+beta+5639205"));
         assertEquals("1.5", ConfigSync.extractCleanVersion("1.5-SNAPSHOT"));
         assertEquals("1.4", ConfigSync.extractCleanVersion("1.4"));
         assertEquals("1.4", ConfigSync.extractCleanVersion("1.4+hotfix"));

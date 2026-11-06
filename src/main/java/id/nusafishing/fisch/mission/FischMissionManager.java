@@ -180,7 +180,7 @@ public class FischMissionManager {
             case ROD:
                 if (mission.getRewardId() != null) {
                     if (plugin.getVirtualRodManager() != null) {
-                        plugin.getVirtualRodManager().addRodToPlayer(player, mission.getRewardId());
+                        plugin.getVirtualRodManager().addRod(player.getUniqueId(), mission.getRewardId());
                         player.sendMessage("§aHadiah Pancingan §e" + mission.getRewardId() + " §atelah ditambahkan ke Koleksi Virtual Rod kamu! (/nf rods)");
                     }
                 }
@@ -215,7 +215,7 @@ public class FischMissionManager {
             case MONEY:
                 double money = mission.getRewardAmount();
                 if (plugin.getEconomyManager() != null && plugin.getEconomyManager().isEconomyEnabled()) {
-                    plugin.getEconomyManager().addMoney(player, money);
+                    plugin.getEconomyManager().depositMoney(player, money);
                     player.sendMessage("§aHadiah: §6+$" + String.format("%.2f", money));
                 }
                 break;

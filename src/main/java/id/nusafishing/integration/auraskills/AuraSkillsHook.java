@@ -99,6 +99,18 @@ public class AuraSkillsHook {
     }
 
     /**
+     * Get player's AuraSkills fishing level by UUID.
+     */
+    public int getAuraFishingLevel(java.util.UUID uuid) {
+        if (uuid == null) return 0;
+        Player player = Bukkit.getPlayer(uuid);
+        if (player != null) {
+            return getFishingLevel(player);
+        }
+        return 0;
+    }
+
+    /**
      * Get fishing level with seamless fallback.
      */
     public int getFishingLevel(Player player) {

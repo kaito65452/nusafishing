@@ -100,4 +100,9 @@ public class MissionRegistry {
         Collections.shuffle(pool);
         return pool.subList(0, Math.min(count, pool.size()));
     }
+
+    public FischMission getRandomMission() {
+        List<FischMission> list = getRandomMissions(1);
+        return list.isEmpty() ? null : list.get(0);
+    }
 }

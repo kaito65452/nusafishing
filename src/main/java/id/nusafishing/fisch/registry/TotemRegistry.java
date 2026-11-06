@@ -76,6 +76,10 @@ public class TotemRegistry {
         return Collections.unmodifiableMap(totems);
     }
 
+    public java.util.Collection<FischTotem> getAllTotems() {
+        return totems.values();
+    }
+
     /**
      * Clears and reloads totems from a ConfigurationSection.
      */

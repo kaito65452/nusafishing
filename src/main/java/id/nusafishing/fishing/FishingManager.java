@@ -422,9 +422,9 @@ public class FishingManager {
         // Apply Fisch Rod Enchants bonuses if rod item is present
         ItemStack rodItem = player.getInventory().getItemInMainHand();
         if (rodItem != null && rodItem.getType() == org.bukkit.Material.FISHING_ROD && plugin.getEnchantRegistry() != null) {
-            double enchantLuck = plugin.getEnchantRegistry().getBonusLuck(rodItem);
-            double enchantWeight = plugin.getEnchantRegistry().getBonusWeight(rodItem);
-            double enchantMutation = plugin.getEnchantRegistry().getBonusMutationChance(rodItem);
+            double enchantLuck = plugin.getEnchantRegistry().getTotalLuckBoost(rodItem);
+            double enchantWeight = plugin.getEnchantRegistry().getTotalWeightBoost(rodItem);
+            double enchantMutation = plugin.getEnchantRegistry().getTotalMutationBoost(rodItem);
             
             if (enchantLuck > 0) totalTierBoost += (int) Math.round(enchantLuck * 2.0);
             if (enchantWeight > 0) weightBoost += enchantWeight;

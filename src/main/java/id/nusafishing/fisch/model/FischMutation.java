@@ -96,6 +96,14 @@ public class FischMutation {
         return sb.toString();
     }
 
+    public String formatName(String baseName, String tierColor) {
+        return applyToName(tierColor + baseName);
+    }
+
+    public String getMutationBadge() {
+        return getFormattedBadge();
+    }
+
     /**
      * Returns a badge representation e.g. "§f[Albino]".
      */

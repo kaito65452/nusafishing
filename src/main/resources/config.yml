@@ -29,6 +29,7 @@ collector:
 # Wiki: https://wiki.aurelium.dev/auraskills/api
 auraskills:
   # Mengaktifkan/menonaktifkan pemberian skill XP AuraSkills saat memancing
+  # Jika dinonaktifkan atau plugin tidak ada, otomatis fallback ke internal skill manager
   enabled: true
   # Base XP memancing per tangkapan
   base_xp: 15.0
@@ -40,6 +41,26 @@ auraskills:
     EPIC: 4.0
     LEGENDARY: 7.0
     MYTHIC: 12.0
+
+# RealisticSeasons & Internal Season Clock
+seasons:
+  # Jumlah hari in-game per musim jika menggunakan fallback internal clock
+  days_per_season: 7
+
+# FancyNpcs Integration (OPSIONAL)
+# Hanya aktif jika diaktifkan di sini dan FancyNpcs terpasang.
+# NPC tidak akan spawn otomatis jika admin belum mendaftarkan lokasinya (/nf npc register).
+fancynpcs:
+  enabled: false
+
+# Virtual Rod Inventory (Fisch Roblox System)
+virtual_rods:
+  # Mengaktifkan sistem penyimpanan alat pancing virtual
+  enabled: true
+  # Alat pancing virtual terikat jiwa (soulbound) dan tidak dapat dibuang / dicuri
+  soulbound: true
+  # Berikan starter rod (basic_rod) secara otomatis ke pemain baru
+  give_starter_rod: true
 
 # Auto-Fishing / AFK Fishing Settings (/nf afk)
 # Format luck-nerf dan speed-nerf menggunakan format <angka>%

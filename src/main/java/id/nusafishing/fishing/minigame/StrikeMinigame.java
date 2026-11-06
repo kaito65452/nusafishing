@@ -203,6 +203,11 @@ public class StrikeMinigame {
                 plugin.getEventManager().handleEventFishCaught(player, fish);
             }
 
+            // Check for Fisch mission progress
+            if (plugin.getFischMissionManager() != null) {
+                plugin.getFischMissionManager().onFishCaught(player, fish);
+            }
+
             // Record untuk turnamen juga jika sedang berlangsung
             if (plugin.getTournamentManager().isTournamentActive()) {
                 plugin.getTournamentManager().recordCatch(player, fish);

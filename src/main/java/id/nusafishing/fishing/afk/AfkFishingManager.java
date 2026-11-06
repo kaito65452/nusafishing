@@ -220,6 +220,11 @@ public class AfkFishingManager implements Listener {
             plugin.getEventManager().handleEventFishCaught(player, fish);
         }
 
+        // Record Fisch mission progress
+        if (plugin.getFischMissionManager() != null) {
+            plugin.getFischMissionManager().onFishCaught(player, fish);
+        }
+
         // Record tournament
         if (plugin.getTournamentManager().isTournamentActive()) {
             plugin.getTournamentManager().recordCatch(player, fish);

@@ -4,7 +4,7 @@
 
 ![Java](https://img.shields.io/badge/Java-21%20%7C%2025%20(MR--JAR)-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
 ![Paper](https://img.shields.io/badge/Platform-Paper%20%2F%20Purpur%201.21.x+-1E88E5?style=for-the-badge&logo=minecraft&logoColor=white)
-![Release](https://img.shields.io/badge/Release-v1.5%2Bbeta-00C853?style=for-the-badge)
+![Release](https://img.shields.io/badge/Release-v1.6%2Balpha-00C853?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-GNU%20GPL%20v2-blue?style=for-the-badge)
 
 **An enterprise-grade, RPG-styled fishing system engineered for modern Spigot, Paper, and Purpur Minecraft servers.**
@@ -21,19 +21,28 @@
 
 ---
 
-## ✨ Features
+## ✨ Features (v1.6+alpha Fisch Roblox Overhaul)
 
-- 🎨 **Pluggable Custom Texture Providers**: Native integration with **Nexo**, **Oraxen**, and **ItemsAdder** with automatic, zero-crash fallback to vanilla materials and custom model data.
-- ⚡ **AuraSkills Integration**: Seamless connection to [AuraSkills](https://wiki.aurelium.dev/auraskills/api) awarding fishing skill experience on custom and vanilla catches, togglable and balanced per tier in `config.yml`.
-- 🤖 **Balanced AFK Auto-Fishing (`/nf afk`)**: Built-in automated fishing with configurable `luck-nerf: <angka>%` and `speed-nerf: <angka>%`, complete with anti-exploit distance and stamina checks.
-- 🔄 **Self-Updating Configuration Engine**: Automatically detects plugin updates, synchronizes config versions, and provisions missing configuration sections with defaults without wiping user settings.
-- ☕ **Java Multi-Release Architecture (MR-JAR)**: Single universal binary (`nusafishing-<version>.jar`) compiling to Java 21 baseline for 1.21.x and Java 25 bytecode for Paper 26.2+.
-- 🐟 **Procedural Catches**: Caught fish feature procedural weights (from grams to tons), quality ratings (1–100), and dynamic tier elevations.
-- 🎣 **Strike Minigame**: Interactive left-click mini-game upon fish bites with real-time title progress bars and stamina consumption.
-- 📈 **Dynamic Supply & Demand Economy**: Market saturation system penalizes automated fish farming with dynamic price drops, while automated cycles restore prices over time (Vault economy supported).
-- 🏆 **Automated Tournaments & Events**: Timed community fishing tournaments (heaviest catch, most fish, specific species) with configurable commands, exp, and cash rewards.
-- 🔮 **Mystic Fish Collector**: Special collector NPC GUI offering premium pricing, combo streaks, and randomized bonus loot for rare specimens.
-- 📊 **PlaceholderAPI Expansion**: Full placeholder support for leaderboards, player stats, levels, and tournament standings.
+- 🎮 **Fisch Roblox Game Mechanics**: Dirombak menyeluruh mengadopsi sistem game Fisch (Roblox) dengan performa tetap super ringan dan efisien:
+  - 🌦️ **Cuaca & Fenomena Samudra**: Sistem cuaca dinamis (Clear, Rain, Fog, Windy, Storm, Aurora, Eclipse) mempengaruhi tingkat kemunculan ikan langka dan mutasi.
+  - 🗿 **Totem Samudra Fisch**: Totem kuno berdurasi (Wind, Tempest, Sundial, Smokescreen, Aurora, Eclipse) yang dapat diaktifkan pemain untuk memanipulasi cuaca perairan global.
+  - 🌟 **Mutasi Ikan Prosedural**: Ikan memiliki kemungkinan bermutasi menjadi Albino, Electric, Dark, Giant, Sparkling, Mythic, Translucent, dan Gold dengan pengali harga serta bobot.
+  - ✨ **Enchantment Alat Pancing Fisch**: Sistem enchant (Resilient, Lucky, Swift, Steady, Abyssal, Mutated) yang langsung terikat pada pancingan virtual via PersistentDataContainer.
+  - 📜 **Misi Harian Fisch**: Sistem quest dinamis untuk mendapatkan Rod, Umpan, Totem, EXP, atau Uang tunai.
+- 🎒 **Virtual Rod Inventory (100% Exploit & Dupe-Free)**: Koleksi pancingan pemain disimpan dalam GUI inventori virtual (`/nf rods`), terproteksi penuh dari duplikasi via peti/hopper, offhand swap (`F`), armor stand/item frame, dan drop saat mati (Soulbound).
+- 🍂 **Integrasi Musim Cerdas**: Terhubung otomatis ke **RealisticSeasons**. Jika tidak dipasang di server, sistem otomatis beralih (*fallback*) ke **Internal Season Clock** tanpa error.
+- ⚡ **AuraSkills Integration & Internal Fallback**: Terhubung ke [AuraSkills](https://wiki.aurelium.dev/auraskills/api) untuk fishing skill. Jika tidak dipasang, beralih ke level memancing internal NusaFishing secara otomatis.
+- 👥 **Optional FancyNpcs Hook**: Integrasi opsional ke FancyNpcs (nonaktif secara default, **zero auto-spawn**) di mana titik NPC harus ditentukan eksplisit oleh admin (`/nf npc register`).
+- 🎨 **Pluggable Custom Texture Providers**: Dukungan **Nexo**, **Oraxen**, dan **ItemsAdder** dengan fallback otomatis ke Vanilla CMD.
+- 🤖 **Balanced AFK Auto-Fishing (`/nf afk`)**: Auto-fishing dengan `luck-nerf` dan `speed-nerf` terkonfigurasi.
+- 🔄 **Self-Updating Configuration Engine**: Deteksi pembaruan otomatis yang melengkapi konfigurasi tanpa menghapus setting pemain.
+- ☕ **Java Multi-Release Architecture (MR-JAR)**: Java 21 baseline hingga Java 25 (Paper 1.21.x - 26.3).
+- 🐟 **Procedural Catches**: Berat gram hingga ton, kualitas 1-100, dan elevasi tier.
+- 🎣 **Strike Minigame**: Mini-game klik kiri interaktif saat ikan menyambar kail.
+- 📈 **Dynamic Supply & Demand Economy**: Penyesuaian harga dinamis mencegah saturasi pasar.
+- 🏆 **Turnamen & Event Terjadwal**: Kompetisi memancing otomatis komunitas server.
+- 🔮 **Mystic Fish Collector**: GUI NPC kolektor ikan mistik dengan bonus combo streak.
+- 📊 **PlaceholderAPI Expansion**: Dukungan placeholder lengkap.
 
 ---
 
@@ -263,23 +272,6 @@ afk_fishing:
   speed-nerf: 30%
 ```
 
-### 7. Interactive Give, Catalog, & Fishbook System
-- **Interactive Give GUI (`/nf give <fish|bait|rod>`)**: Omitting the ID opens an interactive 54-slot paginated GUI for admins and staff. Left-click gives 1 item, Shift-click gives 1 stack (capped by `give.max-amount`). Dynamic permission re-validation on every click prevents authorization leaks.
-- **Admin Fish Protection**: Fish generated by `/nf give` are stamped with a persistent `admin_given` PDC tag. When `give.admin-fish-sellable` is set to `false`, these fish cannot be sold via `/nf sell`, `ShopGUI`, or `EventFishCollectorGUI`, completely eliminating dupe or economy exploits.
-- **Read-Only View Catalog (`/nf view <fish|bait|rod> [id]`)**: Full technical specifications inspection (tiers, weight bounds, quality ranges, stat multipliers, ability descriptions). All interactions, dragging, dropping, and hopper extraction are cancelled.
-- **Personal Fishbook (`/nf fishbook`)**: Dynamic collection codex recording caught fish per player. Caught specimens display original icons and records (catch count, max weight, max quality), while undiscovered species remain hidden as `BLACK_CONCRETE` (`???`).
-
-```yaml
-# config.yml additions
-give:
-  max-amount: 64
-  admin-fish-sellable: false
-  drop-if-full: false
-
-fishbook:
-  include-event-fish: true
-```
-
 ---
 
 ## 📋 Commands & Permissions
@@ -289,22 +281,19 @@ fishbook:
 | Command | Description | Permission | Default |
 |---|---|---|---|
 | `/nf help` | Shows the command guide | None | Everyone |
-| `/nf fishbook` | Opens the personal caught fish collection book | `nusafishing.fishbook` | `true` |
-| `/nf view <fish\|bait\|rod> [id]` | Opens read-only technical item catalog | `nusafishing.view` | `true` |
-| `/nf give <fish\|bait\|rod> [id] [amount] [player]` | Gives items or opens interactive Give GUI | `nusafishing.give` (`.fish`/`.bait`/`.rod`) | `op` |
-| `/nf rod [id] [amount] [player]` | Gives custom fishing rod or opens Rod Give GUI | `nusafishing.give.rod`, `nusafishing.rod` | `op` |
-| `/nf bait [id] [amount] [player]` | Gives custom bait or opens Bait Give GUI | `nusafishing.give.bait`, `nusafishing.bait` | `op` |
 | `/nf afk` | Toggles AFK auto-fishing mode with configured nerfs | `nusafishing.afk` | `true` |
 | `/nf shop` | Opens the graphical Rod, Bait, & Fish Market | `nusafishing.shop` | `true` |
 | `/nf sell` | Sells the fish held in main hand | `nusafishing.sell` | `true` |
 | `/nf sell all` | Sells all fish in inventory storage | `nusafishing.sell` | `true` |
 | `/nf repair` | Repairs the held custom fishing rod | `nusafishing.repair` | `true` |
-| `/nf stats [player]` | Inspects personal or other player's fishing stats | `nusafishing.stats` (`.others`) | `true` / `op` |
+| `/nf stats [player]` | Inspects personal or other player's fishing stats | None | Everyone |
 | `/nf collector` | Opens the Mystic Fish Collector GUI | `nusafishing.collector` | `true` |
 | `/nf tournament join` | Joins the active community fishing tournament | None | Everyone |
-| `/nf reload` | Reloads all configuration files and closes open GUIs | `nusafishing.admin.reload` | `op` |
+| `/nf rod <id> [amount]` | Gives a custom fishing rod | `nusafishing.rod` | `op` |
+| `/nf bait <id> [amount]` | Gives a custom specialty bait | `nusafishing.bait` | `op` |
+| `/nf reload` | Reloads all configuration files | `nusafishing.admin.reload` | `op` |
 | `/nf location <list\|tp\|create\|delete>` | Manages special fishing spots | `nusafishing.admin` | `op` |
-| `/nf event <start\|stop\|info>` | Manages server-wide fishing events | `nusafishing.admin.event` | `op` |
+| `/nf event <start\|stop\|info>` | Manages server-wide fishing events | `nusafishing.admin` | `op` |
 | `/nf tournament <start\|stop\|info>` | Manages fishing tournaments | `nusafishing.admin.tournament` | `op` |
 
 ---
@@ -349,7 +338,7 @@ cd nusafishing
 
 The compiled multi-release artifact will be generated in:
 ```
-build/libs/nusafishing-1.5+beta+<commit>.jar
+build/libs/nusafishing-1.3+SNAPSHOT+<commit>.jar
 ```
 
 ### Verifying Multi-Release Bytecode
@@ -362,20 +351,6 @@ javap -verbose -cp build/libs/nusafishing-*.jar id.nusafishing.NusaFishing | gre
 unzip -p build/libs/nusafishing-*.jar META-INF/versions/25/id/nusafishing/compat/PlatformHelper.class > /tmp/PlatformHelper25.class
 javap -verbose /tmp/PlatformHelper25.class | grep "major version"
 ```
-
----
-
-## 🔄 Catatan Upgrade (v1.5)
-
-Pada pembaruan ke versi **1.5**, sistem konfigurasi NusaFishing telah dilengkapi dengan mesin sinkronisasi aman (`ConfigSync`):
-- **Isolasi Versi Skema (`config_schema: 2`)**: Versi skema konfigurasi kini dipisahkan dari hash commit build. File konfigurasi pemain tidak akan ditulis ulang hanya karena hash build berubah.
-- **Perlindungan Nilai Kustom**: Nilai kustom pemain pada `config.yml`, `fishing.yml`, dan `rewards.yml` **tidak akan pernah ditimpa**. Hanya key baru yang belum ada di file server yang akan disalin dari template bawaan.
-- **Sistem Cadangan Otomatis**: Setiap kali sinkronisasi menambahkan key baru, file cadangan dengan format `<file>.bak-<versi>-<timestamp>.yml` otomatis dibuat di folder plugin (maksimal 3 file cadangan terakhir dipertahankan).
-- **Penambahan Bagian Baru pada `config.yml`**:
-  - `give`: Pengaturan `/nf give` (`max-amount`, `admin-fish-sellable`, `drop-if-full`).
-  - `fishbook`: Pengaturan buku koleksi (`include-event-fish`).
-  - `collector`: Pengaturan Kolektor Mistik (`daily-sell-limit`, `sale-tax-percent`, `max-streak`).
-  - `tournaments`: Konfigurasi jadwal turnamen dan prize pool seimbang.
 
 ---
 

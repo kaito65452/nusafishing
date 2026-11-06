@@ -9,6 +9,7 @@ import id.nusafishing.fishing.model.CustomFish;
 /**
  * Safe manager for AuraSkills integration.
  * Prevents NoClassDefFoundError if AuraSkills is not installed on the server.
+ * Automatically fallbacks to internal PlayerSkillManager when AuraSkills is unavailable.
  */
 public class AuraSkillsHook {
     private final NusaFishing plugin;
@@ -48,18 +49,30 @@ public class AuraSkillsHook {
 
     /**
      * Add AuraSkills fishing experience to player upon catching a fish.
+     * Fallback automatically to internal PlayerSkillManager if absent.
      *
      * @param player The player who caught the fish
      * @param fish   The fish that was caught
      */
     public void addFishingXp(Player player, CustomFish fish) {
-        if (!isAvailable() || !isEnabledInConfig() || player == null || fish == null) {
+        if (player == null || fish == null) {
+            return;
+        }
+        if (!isAvailable() || !isEnabledInConfig()) {
+            if (plugin.getSkillManager() != null) {
+                int xpGain = (int) (5 + (fish.getWeight() * fish.getQuality() / 20.0));
+                plugin.getSkillManager().addFishingExp(player, xpGain);
+            }
             return;
         }
         try {
             handler.addFishingXp(player, fish);
         } catch (Throwable t) {
             plugin.getLogger().warning("Error executing AuraSkills addFishingXp: " + t.getMessage());
+            if (plugin.getSkillManager() != null) {
+                int xpGain = (int) (5 + (fish.getWeight() * fish.getQuality() / 20.0));
+                plugin.getSkillManager().addFishingExp(player, xpGain);
+            }
         }
     }
 
@@ -67,11 +80,37 @@ public class AuraSkillsHook {
      * Add direct AuraSkills fishing experience (e.g. from tournaments).
      */
     public void addXp(Player player, double amount) {
-        if (!isAvailable() || !isEnabledInConfig() || player == null || amount <= 0) {
+        if (player == null || amount <= 0) {
+            return;
+        }
+        if (!isAvailable() || !isEnabledInConfig()) {
+            if (plugin.getSkillManager() != null) {
+                plugin.getSkillManager().addFishingExp(player, (int) Math.round(amount));
+            }
             return;
         }
         try {
             handler.addXp(player, amount);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+            if (plugin.getSkillManager() != null) {
+                plugin.getSkillManager().addFishingExp(player, (int) Math.round(amount));
+            }
+        }
+    }
+
+    /**
+     * Get fishing level with seamless fallback.
+     */
+    public int getFishingLevel(Player player) {
+        if (player == null) return 1;
+        if (isAvailable() && isEnabledInConfig()) {
+            try {
+                return handler.getFishingLevel(player);
+            } catch (Throwable ignored) {}
+        }
+        if (plugin.getSkillManager() != null) {
+            return plugin.getSkillManager().getFishingLevel(player);
+        }
+        return 1;
     }
 }

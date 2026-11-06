@@ -23,6 +23,17 @@ import id.nusafishing.managers.RewardsManager;
 import id.nusafishing.managers.GiveManager;
 import id.nusafishing.integration.item.ItemProviderManager;
 import id.nusafishing.integration.auraskills.AuraSkillsHook;
+import id.nusafishing.integration.season.SeasonHook;
+import id.nusafishing.integration.season.RealisticSeasonsHook;
+import id.nusafishing.integration.npc.FancyNpcsHook;
+import id.nusafishing.fisch.inventory.VirtualRodManager;
+import id.nusafishing.fisch.inventory.VirtualRodListener;
+import id.nusafishing.fisch.environment.FischEnvironmentManager;
+import id.nusafishing.fisch.registry.MutationRegistry;
+import id.nusafishing.fisch.registry.TotemRegistry;
+import id.nusafishing.fisch.registry.EnchantRegistry;
+import id.nusafishing.fisch.registry.MissionRegistry;
+import id.nusafishing.fisch.mission.FischMissionManager;
 import id.nusafishing.fishing.afk.AfkFishingManager;
 
 public class NusaFishing extends JavaPlugin {
@@ -32,6 +43,15 @@ public class NusaFishing extends JavaPlugin {
     
     private ItemProviderManager itemProviderManager;
     private AuraSkillsHook auraSkillsHook;
+    private SeasonHook seasonHook;
+    private FancyNpcsHook fancyNpcsHook;
+    private VirtualRodManager virtualRodManager;
+    private FischEnvironmentManager fischEnvironmentManager;
+    private MutationRegistry mutationRegistry;
+    private TotemRegistry totemRegistry;
+    private EnchantRegistry enchantRegistry;
+    private MissionRegistry missionRegistry;
+    private FischMissionManager fischMissionManager;
     private AfkFishingManager afkFishingManager;
     private ConfigManager configManager;
     private StaminaManager staminaManager;
@@ -57,6 +77,13 @@ public class NusaFishing extends JavaPlugin {
         
         // Initialize item provider manager for texture support (Nexo, Oraxen, ItemsAdder, Vanilla)
         itemProviderManager = new ItemProviderManager(this);
+
+        // Initialize Fisch Registries (Data-driven: Mutations, Totems, Enchants, Missions)
+        this.mutationRegistry = new MutationRegistry();
+        this.totemRegistry = new TotemRegistry();
+        this.enchantRegistry = new EnchantRegistry();
+        this.missionRegistry = new MissionRegistry();
+        this.fischMissionManager = new FischMissionManager(this);
         
         // Initialize managers
         configManager = new ConfigManager(this);
@@ -91,6 +118,19 @@ public class NusaFishing extends JavaPlugin {
 
         // Initialize AuraSkills integration
         this.auraSkillsHook = new AuraSkillsHook(this);
+
+        // Initialize Season integration (RealisticSeasons with internal fallback)
+        this.seasonHook = new RealisticSeasonsHook(this);
+
+        // Initialize Fisch Global Environment Manager (Weather, Seasons, Active Totems, lightweight scheduler)
+        this.fischEnvironmentManager = new FischEnvironmentManager(this);
+
+        // Initialize Virtual Rod Manager & register its high-security listener
+        this.virtualRodManager = new VirtualRodManager(this);
+        getServer().getPluginManager().registerEvents(new VirtualRodListener(this, virtualRodManager), this);
+
+        // Initialize FancyNpcs integration (Optional, disabled by default)
+        this.fancyNpcsHook = new FancyNpcsHook(this);
 
         // Initialize AFK fishing manager and register its listener
         this.afkFishingManager = new AfkFishingManager(this);
@@ -166,6 +206,21 @@ public class NusaFishing extends JavaPlugin {
         // Close all open GUIs and clean leaked GUI items
         id.nusafishing.gui.GUI.closeAll();
 
+        // Shutdown Fisch environment manager
+        if (fischEnvironmentManager != null) {
+            fischEnvironmentManager.shutdown();
+        }
+
+        // Save virtual rods data synchronously to disk
+        if (virtualRodManager != null) {
+            virtualRodManager.saveAll(false);
+        }
+
+        // Save mission data synchronously to disk
+        if (fischMissionManager != null) {
+            fischMissionManager.saveNow();
+        }
+
         LOGGER.info("NusaFishing disabled");
     }
     
@@ -223,6 +278,42 @@ public class NusaFishing extends JavaPlugin {
         return auraSkillsHook;
     }
 
+    public SeasonHook getSeasonHook() {
+        return seasonHook;
+    }
+
+    public FancyNpcsHook getFancyNpcsHook() {
+        return fancyNpcsHook;
+    }
+
+    public VirtualRodManager getVirtualRodManager() {
+        return virtualRodManager;
+    }
+
+    public FischEnvironmentManager getFischEnvironmentManager() {
+        return fischEnvironmentManager;
+    }
+
+    public MutationRegistry getMutationRegistry() {
+        return mutationRegistry;
+    }
+
+    public TotemRegistry getTotemRegistry() {
+        return totemRegistry;
+    }
+
+    public EnchantRegistry getEnchantRegistry() {
+        return enchantRegistry;
+    }
+
+    public MissionRegistry getMissionRegistry() {
+        return missionRegistry;
+    }
+
+    public FischMissionManager getFischMissionManager() {
+        return fischMissionManager;
+    }
+
     public AfkFishingManager getAfkFishingManager() {
         return afkFishingManager;
     }
@@ -249,6 +340,16 @@ public class NusaFishing extends JavaPlugin {
         // Recheck AuraSkills availability
         if (auraSkillsHook != null) {
             auraSkillsHook.checkAvailability();
+        }
+
+        // Recheck Season hook availability
+        if (seasonHook instanceof RealisticSeasonsHook) {
+            ((RealisticSeasonsHook) seasonHook).checkAvailability();
+        }
+
+        // Recheck FancyNpcs availability & sync NPCs
+        if (fancyNpcsHook != null) {
+            fancyNpcsHook.checkAvailability();
         }
         
         // Reload dependent systems

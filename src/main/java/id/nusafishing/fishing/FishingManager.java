@@ -398,16 +398,16 @@ public class FishingManager {
         World world = location.getWorld();
         Biome biome = location.getBlock().getBiome();
         
-        // Calculate tier boost from rod and bait
+        // Calculate tier boost from rod, bait, Fisch enchants, and Fisch Environment (weather, totem, season)
         int totalTierBoost = 0;
         double qualityBoost = 1.0;
         double weightBoost = 1.0;
+        double mutationBoost = 0.0;
 
         if (rod != null) {
             totalTierBoost += rod.getTier().getTierBoost();
             qualityBoost *= rod.getQualityBoost();
         } else {
-            // Default values for vanilla rod - reduced penalty to help players
             totalTierBoost = 0;
             qualityBoost = 0.9;
         }
@@ -417,6 +417,27 @@ public class FishingManager {
             totalTierBoost += activeBait.getTierBoost();
             qualityBoost *= activeBait.getQualityBoost();
             weightBoost *= activeBait.getWeightBoost();
+        }
+
+        // Apply Fisch Rod Enchants bonuses if rod item is present
+        ItemStack rodItem = player.getInventory().getItemInMainHand();
+        if (rodItem != null && rodItem.getType() == org.bukkit.Material.FISHING_ROD && plugin.getEnchantRegistry() != null) {
+            double enchantLuck = plugin.getEnchantRegistry().getBonusLuck(rodItem);
+            double enchantWeight = plugin.getEnchantRegistry().getBonusWeight(rodItem);
+            double enchantMutation = plugin.getEnchantRegistry().getBonusMutationChance(rodItem);
+            
+            if (enchantLuck > 0) totalTierBoost += (int) Math.round(enchantLuck * 2.0);
+            if (enchantWeight > 0) weightBoost += enchantWeight;
+            if (enchantMutation > 0) mutationBoost += enchantMutation;
+        }
+
+        // Apply Fisch Environment Boosts (Active Totems, Weather, Seasons)
+        if (plugin.getFischEnvironmentManager() != null && world != null) {
+            double envLuck = plugin.getFischEnvironmentManager().getEnvironmentLuckBoost(world);
+            double envMutation = plugin.getFischEnvironmentManager().getEnvironmentMutationBoost(world);
+            
+            if (envLuck > 0) totalTierBoost += (int) Math.round(envLuck * 2.0);
+            mutationBoost += envMutation;
         }
 
         // Apply luck nerf to tier, quality, and weight boosts
@@ -472,38 +493,54 @@ public class FishingManager {
 
         // IMPORTANT: If no fish matches criteria, return at least a common fish
         // This ensures vanilla rods always catch something
+        CustomFish caughtFish = null;
         if (availableFish.isEmpty()) {
             CustomFish defaultFish = configManager.getCustomFishes().get("small_carp");
             if (defaultFish == null && !configManager.getCustomFishes().isEmpty()) {
                 defaultFish = configManager.getCustomFishes().values().iterator().next();
             }
             if (defaultFish != null) {
-                return defaultFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
+                caughtFish = defaultFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
             }
-        }
-        
-        // Select a random fish using weighted probability
-        if (!availableFish.isEmpty() && totalWeight > 0) {
+        } else if (totalWeight > 0) {
             double randomValue = random.nextDouble() * totalWeight;
             double cumulativeWeight = 0;
             
             for (int i = 0; i < availableFish.size(); i++) {
                 cumulativeWeight += fishWeights.get(i);
                 if (randomValue <= cumulativeWeight) {
-                    return availableFish.get(i).createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
+                    caughtFish = availableFish.get(i).createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
+                    break;
                 }
             }
         }
         
-        // Fallback to return a basic fish
-        CustomFish fallbackFish = configManager.getCustomFishes().get("small_carp");
-        if (fallbackFish == null && !configManager.getCustomFishes().isEmpty()) {
-            fallbackFish = configManager.getCustomFishes().values().iterator().next();
+        if (caughtFish == null) {
+            CustomFish fallbackFish = configManager.getCustomFishes().get("small_carp");
+            if (fallbackFish == null && !configManager.getCustomFishes().isEmpty()) {
+                fallbackFish = configManager.getCustomFishes().values().iterator().next();
+            }
+            if (fallbackFish != null) {
+                caughtFish = fallbackFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
+            }
         }
-        if (fallbackFish != null) {
-            return fallbackFish.createCaughtInstance(totalTierBoost, qualityBoost, weightBoost, maxPossibleWeight);
+
+        // Apply Fisch Mutation Roll if available
+        if (caughtFish != null && plugin.getMutationRegistry() != null && world != null) {
+            id.nusafishing.fisch.model.FischWeather currentWeather = plugin.getFischEnvironmentManager() != null ?
+                    plugin.getFischEnvironmentManager().getCurrentWeather(world) : id.nusafishing.fisch.model.FischWeather.CLEAR;
+            id.nusafishing.fisch.model.FischSeason currentSeason = plugin.getFischEnvironmentManager() != null ?
+                    plugin.getFischEnvironmentManager().getCurrentSeason(world) : id.nusafishing.fisch.model.FischSeason.SPRING;
+            boolean isNight = world.getTime() >= 13000 && world.getTime() <= 23000;
+
+            id.nusafishing.fisch.model.FischMutation mutation = plugin.getMutationRegistry()
+                    .rollMutation(random, mutationBoost, currentWeather, currentSeason, isNight, caughtFish.getWeight());
+            if (mutation != null) {
+                caughtFish.setMutation(mutation);
+            }
         }
-        return null;
+
+        return caughtFish;
     }
     
     /**

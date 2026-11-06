@@ -106,15 +106,36 @@ public class FishingListener implements Listener {
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
         Player player = event.getPlayer();
+        ItemStack heldItem = player.getInventory().getItemInMainHand();
         
+        // Handle Totem activation with Right Click
+        if (event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_AIR || 
+            event.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
+            if (heldItem != null && heldItem.hasItemMeta() && plugin.getTotemRegistry() != null) {
+                id.nusafishing.fisch.model.FischTotem totem = plugin.getTotemRegistry().getTotemFromItem(heldItem);
+                if (totem != null) {
+                    event.setCancelled(true);
+                    if (plugin.getFischEnvironmentManager() != null) {
+                        plugin.getFischEnvironmentManager().activateTotem(player.getWorld(), totem, player.getLocation(), player);
+                        if (heldItem.getAmount() > 1) {
+                            heldItem.setAmount(heldItem.getAmount() - 1);
+                        } else {
+                            player.getInventory().setItemInMainHand(null);
+                        }
+                    }
+                    return;
+                }
+            }
+        }
+
         // Handle left-click during minigame
         if (event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_AIR ||
             event.getAction() == org.bukkit.event.block.Action.LEFT_CLICK_BLOCK) {
-            ItemStack heldItem = player.getInventory().getItemInMainHand();
-            if (heldItem.getType() != Material.FISHING_ROD) {
-                heldItem = player.getInventory().getItemInOffHand();
+            ItemStack rodCandidate = player.getInventory().getItemInMainHand();
+            if (rodCandidate.getType() != Material.FISHING_ROD) {
+                rodCandidate = player.getInventory().getItemInOffHand();
             }
-            if (heldItem.getType() == Material.FISHING_ROD) {
+            if (rodCandidate.getType() == Material.FISHING_ROD) {
                 if (strikeMinigame.handleClick(player)) {
                     event.setCancelled(true);
                 }
@@ -215,6 +236,11 @@ public class FishingListener implements Listener {
                 // Check for event fish catch
                 if (fish.getId().startsWith("event_")) {
                     plugin.getEventManager().handleEventFishCaught(player, fish);
+                }
+
+                // Check for Fisch mission progress
+                if (plugin.getFischMissionManager() != null) {
+                    plugin.getFischMissionManager().onFishCaught(player, fish);
                 }
 
                 // Record catch in active tournament
@@ -591,6 +617,11 @@ public class FishingListener implements Listener {
         
         // Apply changes
         fishingRod.setItemMeta(meta);
+
+        // Sync with VirtualRodManager if virtual rod is used
+        if (player != null && NusaFishing.getInstance() != null && NusaFishing.getInstance().getVirtualRodManager() != null) {
+            NusaFishing.getInstance().getVirtualRodManager().updateRodDurability(player, rodId, newDurability);
+        }
         
         // Notify player if durability is low
         if (newDurability <= 10 && newDurability > 0) {
@@ -664,6 +695,11 @@ public class FishingListener implements Listener {
         
         // Apply changes
         fishingRod.setItemMeta(meta);
+
+        // Sync with VirtualRodManager if virtual rod is used
+        if (player != null && NusaFishing.getInstance() != null && NusaFishing.getInstance().getVirtualRodManager() != null) {
+            NusaFishing.getInstance().getVirtualRodManager().updateRodDurability(player, rodId, rod.getDurability());
+        }
         return true;
     }
     

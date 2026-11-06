@@ -68,6 +68,7 @@ public class CustomFish {
     private double weight;
     private int quality;
     private FishTier actualTier; // Tier aktual saat tertangkap (bisa dipengaruhi bonus)
+    private id.nusafishing.fisch.model.FischMutation mutation; // Mutasi Fisch (Albino, Electric, Giant, etc.)
     
     public CustomFish(String id, String name, String description, Material material,
                      int customModelData, double minWeight, double maxWeight,
@@ -183,64 +184,55 @@ public class CustomFish {
         }
     }
     
-    // Get the actual price based on weight, quality, and tier
     public double getPrice() {
+        double rawPrice;
         if (id != null && id.startsWith("event_")) {
-            return getEventFishPrice();
-        }
-
-        // 1. Nilai dasar berdasarkan kualitas dan tier
-        double avgQuality = (double) (minQuality + maxQuality) / 2.0;
-        double qualityFactor = avgQuality > 0.0 ? (quality / avgQuality) : 1.0;
-        FishTier tier = getActualTier();
-        double tierFactor = tier.getPriceMultiplier();
-        double baseValue = basePrice * qualityFactor * tierFactor;
-        
-        // 2. Faktor berat dengan diminishing returns
-        // - Linear sampai 10kg
-        // - Logaritmik dari 10kg-100kg
-        // - Akar kuadrat di atas 100kg (drastis mengurangi returns)
-        double avgWeight = (minWeight + Math.min(10.0, maxWeight)) / 2.0;
-        double factorAt10 = avgWeight > 0.0 ? (10.0 / avgWeight) : 1.0;
-        double factorAt100 = factorAt10 + 2.0; // factorAt10 + (Math.log10(100.0 / 10.0) * 2.0)
-
-        double weightFactor;
-        if (avgWeight <= 0.0) {
-            weightFactor = 1.0;
-        } else if (weight <= 10.0) {
-            // Untuk ikan kecil, faktor linier (normal)
-            weightFactor = weight / avgWeight;
-        } else if (weight <= 100.0) {
-            // Untuk ikan medium, logaritmik (pertumbuhan melambat)
-            weightFactor = factorAt10 + (Math.log10(weight / 10.0) * 2.0);
+            rawPrice = getEventFishPrice();
         } else {
-            // Untuk ikan besar, akar kuadrat (drastis melambat)
-            weightFactor = factorAt100 + ((Math.sqrt(weight / 100.0) - 1.0) * 0.5);
+            // 1. Nilai dasar berdasarkan kualitas dan tier
+            double avgQuality = (double) (minQuality + maxQuality) / 2.0;
+            double qualityFactor = avgQuality > 0.0 ? (quality / avgQuality) : 1.0;
+            FishTier tier = getActualTier();
+            double tierFactor = tier.getPriceMultiplier();
+            double baseValue = basePrice * qualityFactor * tierFactor;
+            
+            // 2. Faktor berat dengan diminishing returns
+            // - Linear sampai 10kg
+            // - Logaritmik dari 10kg-100kg
+            // - Akar kuadrat di atas 100kg (drastis mengurangi returns)
+            double avgWeight = (minWeight + Math.min(10.0, maxWeight)) / 2.0;
+            double factorAt10 = avgWeight > 0.0 ? (10.0 / avgWeight) : 1.0;
+            double factorAt100 = factorAt10 + 2.0;
+
+            double weightFactor;
+            if (avgWeight <= 0.0) {
+                weightFactor = 1.0;
+            } else if (weight <= 10.0) {
+                weightFactor = weight / avgWeight;
+            } else if (weight <= 100.0) {
+                weightFactor = factorAt10 + (Math.log10(weight / 10.0) * 2.0);
+            } else {
+                weightFactor = factorAt100 + ((Math.sqrt(weight / 100.0) - 1.0) * 0.5);
+            }
+            
+            double difficultyBonus = 1.0;
+            double maintenanceCost = Math.min(weight * 0.01, 10.0);
+            
+            rawPrice = Math.max(1.0, (baseValue * weightFactor * difficultyBonus) - maintenanceCost);
+            
+            if (tier == FishTier.MYTHIC) {
+                rawPrice = Math.max(rawPrice, basePrice * 3);
+            } else if (tier == FishTier.LEGENDARY || tier == FishTier.EPIC) {
+                rawPrice = Math.max(rawPrice, basePrice * 2);
+            }
         }
-        
-        // 3. Faktor kesulitan penangkapan - ikan dengan weight mendekati max capacity lebih berharga
-        // Hal ini mendorong pemain untuk menangkap ikan pada kapasitas rod mereka
-        double difficultyBonus = 1.0;
-        
-        // 4. Biaya pemeliharaan - mengurangi keuntungan bersih
-        // Ikan besar lebih cepat merusak peralatan
-        double maintenanceCost = Math.min(weight * 0.01, 10.0); // Maksimal 10 coin
-        
-        // 5. Hitung total harga dengan formula yang lebih kompleks
-        double rawPrice = baseValue * weightFactor * difficultyBonus;
-        double finalPrice = Math.max(1.0, rawPrice - maintenanceCost);
-        
-        // 6. Terapkan market saturation untuk mencegah peternakan ikan
-        // (Diterapkan di EconomyManager melalui dynamic pricing)
-        
-        // 7. Pastikan ikan langka tetap berharga
-        if (actualTier == FishTier.MYTHIC) {
-            finalPrice = Math.max(finalPrice, basePrice * 3);
-        } else if (actualTier == FishTier.LEGENDARY || actualTier == FishTier.EPIC) {
-            finalPrice = Math.max(finalPrice, basePrice * 2);
+
+        // Terapkan multiplier mutasi Fisch jika ikan bermutasi
+        if (mutation != null) {
+            rawPrice *= mutation.getPriceMultiplier();
         }
-        
-        return finalPrice;
+
+        return rawPrice;
     }
     
     /**
@@ -308,8 +300,18 @@ public class CustomFish {
         }
 
         FishTier tier = getActualTier();
-        meta.setDisplayName(tier.getColor() + name + " " + tier.getDisplayName());
+        String displayName = tier.getColor() + name + " " + tier.getDisplayName();
+        if (mutation != null) {
+            displayName = mutation.formatName(name, tier.getColor());
+        }
+        meta.setDisplayName(displayName);
+
         List<String> lore = new java.util.ArrayList<>();
+        if (mutation != null) {
+            lore.add(mutation.getMutationBadge());
+            lore.add("§8" + mutation.getDescription());
+            lore.add("");
+        }
         lore.add("§7Berat: §f" + getFormattedWeight());
         lore.add("§7Kualitas: §f" + quality + "/100");
         lore.add("§7Tier: " + tier.getColor() + tier.getDisplayName());
@@ -324,6 +326,9 @@ public class CustomFish {
         container.set(NamespacedKey.fromString("nusafishing:fish_weight"), PersistentDataType.DOUBLE, weight);
         container.set(NamespacedKey.fromString("nusafishing:fish_quality"), PersistentDataType.INTEGER, quality);
         container.set(NamespacedKey.fromString("nusafishing:fish_tier"), PersistentDataType.INTEGER, tier.ordinal());
+        if (mutation != null) {
+            container.set(NamespacedKey.fromString("nusafishing:fish_mutation"), PersistentDataType.STRING, mutation.getId());
+        }
         fishItem.setItemMeta(meta);
         
         return fishItem;
@@ -348,6 +353,17 @@ public class CustomFish {
     public FishTier getActualTier() {
         // Never return null - fall back to base tier if actual tier is null
         return actualTier != null ? actualTier : baseTier;
+    }
+
+    public id.nusafishing.fisch.model.FischMutation getMutation() {
+        return mutation;
+    }
+
+    public void setMutation(id.nusafishing.fisch.model.FischMutation mutation) {
+        this.mutation = mutation;
+        if (mutation != null) {
+            this.weight *= mutation.getWeightMultiplier();
+        }
     }
 
     /**

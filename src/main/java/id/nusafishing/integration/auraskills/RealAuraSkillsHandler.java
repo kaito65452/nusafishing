@@ -68,4 +68,18 @@ public class RealAuraSkillsHandler implements AuraSkillsHandler {
             }
         } catch (Throwable ignored) {}
     }
+
+    @Override
+    public int getFishingLevel(Player player) {
+        if (player == null) return 1;
+        try {
+            AuraSkillsApi api = AuraSkillsApi.get();
+            if (api == null) return 1;
+            SkillsUser user = api.getUser(player.getUniqueId());
+            if (user != null && user.isLoaded()) {
+                return user.getSkillLevel(Skills.FISHING);
+            }
+        } catch (Throwable ignored) {}
+        return 1;
+    }
 }

@@ -439,18 +439,23 @@ public class ShopGUI extends GUI {
                 return;
             }
             
-            // Create the fishing rod item
-            ItemStack rodItem = rod.createItemStack();
-            
-            // Give to player, drop naturally if inventory full
-            Map<Integer, ItemStack> leftover = player.getInventory().addItem(rodItem);
-            if (!leftover.isEmpty()) {
-                for (ItemStack drop : leftover.values()) {
-                    player.getWorld().dropItemNaturally(player.getLocation(), drop);
+            // Add to virtual rod inventory collection
+            if (plugin.getVirtualRodManager() != null) {
+                plugin.getVirtualRodManager().addRod(player.getUniqueId(), rodId);
+                plugin.getVirtualRodManager().equipRod(player, rodId);
+                player.sendMessage("§aKamu berhasil membeli §b" + rod.getName() + " §adan langsung diequip dari Virtual Rods! (/nf rods)");
+            } else {
+                // Fallback to legacy physical item if virtual rod manager is absent
+                ItemStack rodItem = rod.createItemStack();
+                Map<Integer, ItemStack> leftover = player.getInventory().addItem(rodItem);
+                if (!leftover.isEmpty()) {
+                    for (ItemStack drop : leftover.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                    }
+                    player.sendMessage("§eInventori kamu penuh! Pancingan telah dijatuhkan ke tanah.");
                 }
-                player.sendMessage("§eInventori kamu penuh! Pancingan telah dijatuhkan ke tanah.");
+                player.sendMessage("§aKamu berhasil membeli §b" + rod.getName() + "§a!");
             }
-            player.sendMessage("§aKamu berhasil membeli §b" + rod.getName() + "§a!");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
             
             // Refresh the inventory

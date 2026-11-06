@@ -524,12 +524,221 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§fTangkapan Terbesar: §b" + largestName + " §7(§f" + String.format(java.util.Locale.US, "%.2f", largestWeight) + " kg§7)");
                 return true;
 
+            case "rods":
+            case "rodmenu":
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage("§cCommand ini hanya dapat digunakan oleh player!");
+                    return true;
+                }
+                if (!sender.hasPermission("nusafishing.rods") && !sender.hasPermission("nusafishing.rod")) {
+                    sender.sendMessage("§cKamu tidak memiliki izin untuk membuka menu koleksi alat pancing!");
+                    return true;
+                }
+                new id.nusafishing.fisch.inventory.VirtualRodInventoryGUI((Player) sender, plugin).open();
+                return true;
+
+            case "season":
+            case "seasons":
+                org.bukkit.World sWorld = (sender instanceof Player) ? ((Player) sender).getWorld() : Bukkit.getWorlds().get(0);
+                id.nusafishing.integration.season.SeasonHook.Season currentSeason = plugin.getSeasonHook().getSeason(sWorld);
+                int daysLeft = plugin.getSeasonHook().getDaysLeftInSeason(sWorld);
+                sender.sendMessage("§b=== Informasi Musim NusaFishing ===");
+                sender.sendMessage("§7Musim Saat Ini: " + currentSeason.getColoredName());
+                sender.sendMessage("§7Sisa Waktu Musim: §e" + daysLeft + " hari");
+                sender.sendMessage("§7Provider: §f" + (plugin.getSeasonHook().isAvailable() ? "RealisticSeasons" : "Internal Season Clock"));
+                return true;
+
+            case "mission":
+            case "quest":
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage("§cCommand ini hanya dapat digunakan oleh player!");
+                    return true;
+                }
+                if (!sender.hasPermission("nusafishing.mission")) {
+                    sender.sendMessage("§cKamu tidak memiliki izin untuk melihat misi!");
+                    return true;
+                }
+                Player mPlayer = (Player) sender;
+                if (plugin.getFischMissionManager() != null) {
+                    id.nusafishing.fisch.model.FischMission mission = plugin.getFischMissionManager().getActiveMission(mPlayer);
+                    if (mission == null) {
+                        mPlayer.sendMessage("§cBelum ada misi aktif saat ini.");
+                    } else {
+                        int prog = plugin.getFischMissionManager().getProgress(mPlayer, mission.getId());
+                        mPlayer.sendMessage("§b=== Misi Fisch Harian ===");
+                        mPlayer.sendMessage("§e" + mission.getTitle());
+                        mPlayer.sendMessage("§7" + mission.getDescription());
+                        mPlayer.sendMessage("§7Progress: §a" + prog + "§7/§f" + mission.getRequiredFishCount());
+                        mPlayer.sendMessage("§7Hadiah: §e" + mission.getRewardType().getDisplayName() + (mission.getRewardId() != null ? " (" + mission.getRewardId() + ")" : ""));
+                    }
+                }
+                return true;
+
+            case "totem":
+                if (!sender.hasPermission("nusafishing.admin")) {
+                    sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+                    return true;
+                }
+                return handleTotemCommand(sender, args);
+
+            case "npc":
+                if (!sender.hasPermission("nusafishing.admin")) {
+                    sender.sendMessage("§cKamu tidak memiliki izin untuk menggunakan perintah ini!");
+                    return true;
+                }
+                return handleNpcCommand(sender, args);
+
             default:
                 sender.sendMessage("§cCommand tidak valid! Gunakan /nusafishing help untuk bantuan.");
                 return true;
         }
     }
     
+    private boolean handleTotemCommand(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§b=== Totem Commands ===");
+            sender.sendMessage("§f/nf totem list §7- Tampilkan daftar totem");
+            sender.sendMessage("§f/nf totem give <id> [player] [jumlah] §7- Berikan totem");
+            return true;
+        }
+
+        String sub = args[1].toLowerCase();
+        if (sub.equals("list")) {
+            sender.sendMessage("§b=== Daftar Totem Fisch ===");
+            if (plugin.getTotemRegistry() != null) {
+                for (id.nusafishing.fisch.model.FischTotem t : plugin.getTotemRegistry().getAllTotems()) {
+                    sender.sendMessage("§e- " + t.getId() + " §7: " + t.getName() + " (" + t.getDurationSeconds() + "s)");
+                }
+            }
+            return true;
+        } else if (sub.equals("give")) {
+            if (args.length < 3) {
+                sender.sendMessage("§cPenggunaan: /nf totem give <id> [player] [jumlah]");
+                return true;
+            }
+            String totemId = args[2].toLowerCase();
+            Player target = (args.length > 3) ? Bukkit.getPlayer(args[3]) : (sender instanceof Player ? (Player) sender : null);
+            int amount = 1;
+            if (args.length > 4) {
+                try {
+                    amount = Math.max(1, Integer.parseInt(args[4]));
+                } catch (NumberFormatException ignored) {}
+            }
+            if (target == null) {
+                sender.sendMessage("§cPemain tidak ditemukan!");
+                return true;
+            }
+            if (plugin.getTotemRegistry() == null) {
+                sender.sendMessage("§cTotem registry tidak tersedia!");
+                return true;
+            }
+            id.nusafishing.fisch.model.FischTotem totem = plugin.getTotemRegistry().getTotem(totemId);
+            if (totem == null) {
+                sender.sendMessage("§cTotem '" + totemId + "' tidak ditemukan!");
+                return true;
+            }
+            target.getInventory().addItem(totem.createItemStack(amount));
+            sender.sendMessage("§aBerhasil memberikan " + amount + "x totem '" + totemId + "' ke " + target.getName());
+            return true;
+        }
+
+        sender.sendMessage("§cSubcommand totem tidak dikenal.");
+        return true;
+    }
+
+    private boolean handleNpcCommand(CommandSender sender, String[] args) {
+        id.nusafishing.integration.npc.FancyNpcsHook hook = plugin.getFancyNpcsHook();
+        if (hook == null) {
+            sender.sendMessage("§cFancyNpcs hook tidak tersedia!");
+            return true;
+        }
+
+        if (args.length < 2) {
+            sender.sendMessage("§b=== NusaFishing NPC Commands ===");
+            sender.sendMessage("§f/nusafishing npc register <id> <type> [nama] §7- Daftarkan NPC di posisimu");
+            sender.sendMessage("§7  Tipe yang didukung: §eMERCHANT, RODS, COLLECTOR");
+            sender.sendMessage("§f/nusafishing npc remove <id> §7- Hapus NPC");
+            sender.sendMessage("§f/nusafishing npc list §7- Daftar NPC terdaftar");
+            sender.sendMessage("§f/nusafishing npc sync §7- Sinkronisasi ulang NPC ke FancyNpcs");
+            return true;
+        }
+
+        String action = args[1].toLowerCase();
+        switch (action) {
+            case "list":
+                sender.sendMessage("§b=== Daftar NPC Terdaftar ===");
+                if (hook.getRegisteredNpcIds().isEmpty()) {
+                    sender.sendMessage("§7Belum ada NPC yang didaftarkan.");
+                } else {
+                    for (String id : hook.getRegisteredNpcIds()) {
+                        id.nusafishing.integration.npc.FancyNpcsHook.RegisteredNpc npc = hook.getRegisteredNpc(id);
+                        if (npc != null) {
+                            sender.sendMessage("§e- " + npc.getId() + " §7[" + npc.getType().name() + "]: " + npc.getDisplayName());
+                        }
+                    }
+                }
+                return true;
+
+            case "sync":
+                hook.syncAdminNpcs();
+                sender.sendMessage("§aBerhasil melakukan sinkronisasi NPC ke FancyNpcs.");
+                return true;
+
+            case "remove":
+            case "delete":
+                if (args.length < 3) {
+                    sender.sendMessage("§cPenggunaan: /nusafishing npc remove <id>");
+                    return true;
+                }
+                String removeId = args[2].toLowerCase();
+                if (hook.removeNpcLocation(removeId)) {
+                    sender.sendMessage("§aNPC '" + removeId + "' berhasil dihapus.");
+                } else {
+                    sender.sendMessage("§cNPC '" + removeId + "' tidak ditemukan.");
+                }
+                return true;
+
+            case "register":
+            case "create":
+                if (!(sender instanceof Player)) {
+                    sender.sendMessage("§cCommand register NPC hanya dapat digunakan oleh player in-game!");
+                    return true;
+                }
+                if (args.length < 4) {
+                    sender.sendMessage("§cPenggunaan: /nusafishing npc register <id> <type> [nama]");
+                    sender.sendMessage("§7Tipe: §eMERCHANT, RODS, COLLECTOR");
+                    return true;
+                }
+                Player player = (Player) sender;
+                String npcId = args[2].toLowerCase();
+                id.nusafishing.integration.npc.FancyNpcsHook.NpcType type = id.nusafishing.integration.npc.FancyNpcsHook.NpcType.fromString(args[3]);
+                String displayName = "§e" + type.getDefaultTitle();
+                if (args.length > 4) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 4; i < args.length; i++) {
+                        sb.append(args[i]).append(" ");
+                    }
+                    displayName = sb.toString().trim().replace("&", "§");
+                }
+                boolean success = hook.registerNpcLocation(npcId, type, player.getLocation(), displayName);
+                if (success) {
+                    sender.sendMessage("§aNPC '" + npcId + "' berhasil didaftarkan di lokasi saat ini!");
+                    if (!hook.isEnabledInConfig()) {
+                        sender.sendMessage("§eCatatan: fancynpcs.enabled saat ini bernilai false di config.yml.");
+                    } else if (!hook.isAvailable()) {
+                        sender.sendMessage("§eCatatan: Plugin FancyNpcs belum aktif di server.");
+                    }
+                } else {
+                    sender.sendMessage("§cGagal mendaftarkan NPC.");
+                }
+                return true;
+
+            default:
+                sender.sendMessage("§cSubcommand NPC tidak dikenal. Ketik /nusafishing npc untuk bantuan.");
+                return true;
+        }
+    }
+
     /**
      * Teleport a player to a special fishing location
      * @param player The player to teleport
@@ -1215,12 +1424,17 @@ public class NusaFishingCommand implements CommandExecutor, TabCompleter {
             if (sender.hasPermission("nusafishing.sell")) subCommands.add("sell");
             if (sender.hasPermission("nusafishing.afk")) subCommands.add("afk");
             if (sender.hasPermission("nusafishing.collector")) subCommands.add("collector");
+            if (sender.hasPermission("nusafishing.rods") || sender.hasPermission("nusafishing.rod")) subCommands.add("rods");
+            if (sender.hasPermission("nusafishing.season")) subCommands.add("season");
+            if (sender.hasPermission("nusafishing.mission")) subCommands.add("mission");
             subCommands.add("tournament");
             if (sender.hasPermission("nusafishing.stats")) subCommands.add("stats");
             if (sender.hasPermission("nusafishing.admin.event")) subCommands.add("event");
             if (sender.hasPermission("nusafishing.admin")) {
                 subCommands.add("location");
                 subCommands.add("reload");
+                subCommands.add("npc");
+                subCommands.add("totem");
             }
 
             return filterCompletions(new ArrayList<>(subCommands), args[0]);

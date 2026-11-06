@@ -23,4 +23,9 @@ public interface AuraSkillsHandler {
      * @param amount The experience amount
      */
     void addXp(Player player, double amount);
+
+    /**
+     * Get player's AuraSkills fishing level.
+     */
+    int getFishingLevel(Player player);
 }

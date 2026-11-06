@@ -5,7 +5,7 @@ website: https://github.com/kaito65452/nusafishing
 author: "RanggaGibran"
 contributors: ["Asano Saryu"]
 api-version: '1.21'
-softdepend: [Vault, PlaceholderAPI, Nexo, Oraxen, ItemsAdder, AuraSkills]
+softdepend: [Vault, PlaceholderAPI, Nexo, Oraxen, ItemsAdder, AuraSkills, RealisticSeasons, FancyNpcs]
 
 commands:
   nusafishing:
@@ -14,6 +14,12 @@ commands:
     usage: /nusafishing help
 
 permissions:
+  nusafishing.rods:
+    description: Izin untuk membuka inventori alat pancing virtual
+    default: true
+  nusafishing.season:
+    description: Izin untuk melihat informasi musim
+    default: true
   nusafishing.rod:
     description: Izin untuk mendapatkan pancingan custom
     default: op
@@ -56,6 +62,9 @@ permissions:
     default: true
   nusafishing.collector:
     description: Izin untuk menggunakan kolektor ikan mistik
+    default: true
+  nusafishing.mission:
+    description: Izin untuk melihat dan menyelesaikan misi harian Fisch
     default: true
   nusafishing.admin.tournament:
     description: Izin untuk mengelola turnamen memancing

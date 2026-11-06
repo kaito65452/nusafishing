@@ -86,14 +86,29 @@ public class PlayerSkillManager {
     }
     
     public int getFishingLevel(Player player) {
-        return fishingLevels.getOrDefault(player.getUniqueId(), 1);
+        if (player == null) return 1;
+        return getFishingLevel(player.getUniqueId());
     }
     
     public int getFishingExperience(Player player) {
-        return fishingExperience.getOrDefault(player.getUniqueId(), 0);
+        if (player == null) return 0;
+        return getFishingExperience(player.getUniqueId());
     }
     
     public int getFishingLevel(UUID playerId) {
+        if (playerId == null) return 1;
+        // Check AuraSkills hook first if enabled and available
+        if (plugin != null && plugin.getAuraSkillsHook() != null && plugin.getAuraSkillsHook().isAvailable() && plugin.getAuraSkillsHook().isEnabledInConfig()) {
+            int auraLevel = plugin.getAuraSkillsHook().getAuraFishingLevel(playerId);
+            if (auraLevel > 0) {
+                return auraLevel;
+            }
+        }
+        return getInternalFishingLevel(playerId);
+    }
+
+    public int getInternalFishingLevel(UUID playerId) {
+        if (playerId == null) return 1;
         if (fishingLevels.containsKey(playerId)) {
             return fishingLevels.get(playerId);
         }
@@ -101,6 +116,7 @@ public class PlayerSkillManager {
     }
 
     public int getFishingExperience(UUID playerId) {
+        if (playerId == null) return 0;
         if (fishingExperience.containsKey(playerId)) {
             return fishingExperience.get(playerId);
         }

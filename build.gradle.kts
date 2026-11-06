@@ -54,6 +54,7 @@ dependencies {
     // Java 25 source set dependencies (Paper 26.2+ baseline)
     "java25CompileOnly"("io.papermc.paper:paper-api:26.2.build.134-stable")
     "java25CompileOnly"(sourceSets["main"].output)
+    "java25CompileOnly"("dev.aurelium:auraskills-api-bukkit:2.2.4")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("com.github.seeseemelk:MockBukkit-v1.21:3.133.2")
